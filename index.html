@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Daily20 | Pro Trainer</title>
+<script src=""></script>
+<script src=""></script>
+<script src=""></script>
+<style>
+:root { --bg: #121212; --card: #1e1e1e; --neon: #ff9900; --text: #ffffff; --dim: #888888; --danger: #ff4d4d; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; margin: 0; padding: 15px; overflow-x: hidden; }
+.container { max-width: 500px; margin: 0 auto; padding-bottom: 40px; }
+.card { background: var(--card); padding: 20px; border-radius: 16px; margin-bottom: 15px; border: 1px solid #333; }
+input { background: #2a2a2a; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; margin-bottom: 10px; width: 100%; box-sizing: border-box; font-size: 16px; }
+button { background: var(--neon); color: black; border: none; padding: 14px; border-radius: 10px; font-weight: 800; width: 100%; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
+button:active { transform: scale(0.95); }
+.btn-secondary { background: #333; color: white; margin-top: 10px; }
+.btn-ghost { background: transparent; color: var(--neon); border: 1px solid var(--neon); margin-top: 10px; }
+.calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 15px; }
+.day { aspect-ratio: 1; background: #2a2a2a; display: flex; align-items: center; justify-content: center; font-size: 12px; border-radius: 6px; cursor: pointer; transition: 0.2s; position: relative; }
+.complete { background: var(--neon); color: black; box-shadow: 0 0 10px rgba(255,153,0,0.3); }
+.partial { border: 2px solid var(--neon); color: var(--neon); }
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; box-sizing: border-box; }
+.modal { background: var(--card); padding: 25px; border-radius: 20px; width: 100%; max-width: 400px; border: 1px solid #444; text-align: center; }
+.thumb { width: 80px; height: 50px; border-radius: 6px; object-fit: cover; }
+.video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 12px; margin-bottom: 20px; background: #000; border: 1px solid #333; }
+.video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 0; }
+.history-list { max-height: 200px; overflow-y: auto; margin-top: 15px; border-top: 1px solid #333; padding-top: 10px; text-align: left; }
+.history-item { font-size: 14px; color: var(--dim); margin-bottom: 5px; display: flex; align-items: center; gap: 8px; }
+@keyframes pulse-orange { 0% { background-color: rgba(255, 153, 0, 0); } 50% { background-color: rgba(255, 153, 0, 0.4); } 100% { background-color: rgba(255, 153, 0, 0); } }
+.celebrate-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2000; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: pulse-orange 1.5s ease-out 2; }
+.celebrate-text { font-size: 32px; font-weight: 900; color: var(--neon); text-shadow: 0 0 20px rgba(255,153,0,0.8); transform: scale(0); animation: pop-in 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+@keyframes pop-in { to { transform: scale(1); } }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect } = React;
+const getYTID = (url) => {
+const match = url.match(/(?:youtu.be/|youtube.com/(?:.v=|./|.*embed/))([^&amp;?\s]{11})/);
+return match ? match[1] : null;
+};
+const App = () => {
+const [view, setView] = useState('home');
+const [library, setLibrary] = useState(JSON.parse(localStorage.getItem('lib') || '[]'));
+const [history, setHistory] = useState(JSON.parse(localStorage.getItem('hist') || '{}'));
+const [selectedDay, setSelectedDay] = useState(null);
+const [showCelebration, setShowCelebration] = useState(false);
+const [plan, setPlan] = useState([]);
+const [currentIdx, setCurrentIdx] = useState(0);
+const [timeLeft, setTimeLeft] = useState(0);
+const [sessionLog, setSessionLog] = useState([]);
+const [isActive, setIsActive] = useState(false);
+
+</body>
+</html>
+
+Please confirm if you can see this text now. If it worked, you can copy it and save it as an .html file. Would you like me to resend the Master Prompt text as well?
