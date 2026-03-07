@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Daily20 Pro | Hybrid Player</title>
+    <title>Daily20 Pro | Power Controls</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -14,29 +14,27 @@
         .container { max-width: 500px; margin: 0 auto; padding-bottom: 60px; }
         .card { background: var(--card); padding: 20px; border-radius: 16px; margin-bottom: 15px; border: 1px solid #333; position: relative; }
         input { background: #2a2a2a; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; margin-bottom: 10px; width: 100%; box-sizing: border-box; font-size: 16px; }
-        button { background: var(--neon); color: black; border: none; padding: 14px; border-radius: 10px; font-weight: 800; width: 100%; cursor: pointer; text-transform: uppercase; }
+        button { background: var(--neon); color: black; border: none; padding: 14px; border-radius: 10px; font-weight: 800; width: 100%; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
+        button:active { transform: scale(0.95); }
         .btn-sec { background: #333; color: white; margin-top: 10px; }
+        
         .carousel { display: flex; overflow-x: auto; gap: 12px; padding: 10px 5px; scroll-snap-type: x mandatory; margin-bottom: 15px; }
         .carousel::-webkit-scrollbar { display: none; }
         .carousel-item { scroll-snap-align: start; flex: 0 0 120px; cursor: pointer; text-align: center; }
         .carousel-thumb { width: 120px; height: 75px; border-radius: 10px; object-fit: cover; border: 2px solid transparent; background: #333; }
         .selected .carousel-thumb { border-color: var(--neon); box-shadow: 0 0 15px var(--neon); }
-        .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-top: 20px; }
-        .day { aspect-ratio: 1; background: #2a2a2a; display: flex; align-items: center; justify-content: center; font-size: 12px; border-radius: 8px; color: var(--dim); }
-        .day.complete { background: var(--neon); color: black; }
-        
-        /* Hybrid Player Area */
-        .player-wrapper { width: 100%; aspect-ratio: 16/9; border-radius: 16px; overflow: hidden; background: #000; margin-bottom: 15px; position: relative; }
+
+        .player-wrapper { width: 100%; aspect-ratio: 16/9; border-radius: 16px; overflow: hidden; background: #000; margin-bottom: 15px; position: relative; border: 1px solid #333; }
         #yt-player, .insta-player { width: 100%; height: 100%; border: 0; }
         
         .status-tag { display: inline-block; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; margin-bottom: 5px; }
         .status-paused { background: var(--danger); color: white; }
         .status-playing { background: var(--success); color: black; }
         .status-manual { background: var(--warning); color: black; }
+
         .lib-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2a2a2a; }
-        .icon-btn-group { display: flex; gap: 10px; margin-top: 15px; }
-        .icon-btn { background: #2a2a2a; border: 1px solid #444; color: white; padding: 10px; border-radius: 10px; flex: 1; display: flex; align-items: center; justify-content: center; }
-        .icon-btn svg { width: 18px; height: 18px; margin-right: 5px; stroke: var(--neon); }
+        .control-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .mini-btn { background: #2a2a2a; color: white; padding: 10px; border-radius: 8px; font-size: 12px; border: 1px solid #444; flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px; }
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 3000; padding: 20px; }
     </style>
 </head>
@@ -46,36 +44,32 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        const ExportIcon = () => (<svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>);
-        const ImportIcon = () => (<svg viewBox="0 0 24 24" fill="none" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>);
-
         const App = () => {
             const [view, setView] = useState('home');
-            const [lib, setLib] = useState(() => JSON.parse(localStorage.getItem('d20_hybrid_v13') || '[]'));
-            const [hist, setHist] = useState(() => JSON.parse(localStorage.getItem('d20_hist_v13') || '{}'));
+            const [lib, setLib] = useState(() => JSON.parse(localStorage.getItem('d20_final_v14') || '[]'));
+            const [hist, setHist] = useState(() => JSON.parse(localStorage.getItem('d20_hist_v14') || '{}'));
             const [selectedId, setSelectedId] = useState(null);
             const [editingVid, setEditingVid] = useState(null);
             const [workout, setWorkout] = useState({ plan: [], idx: 0, seconds: 0 });
             const [isPlaying, setIsPlaying] = useState(false);
+            const [isMuted, setIsMuted] = useState(false);
             const [timerOverride, setTimerOverride] = useState(false);
             const playerRef = useRef(null);
 
             useEffect(() => {
-                localStorage.setItem('d20_hybrid_v13', JSON.stringify(lib));
-                localStorage.setItem('d20_hist_v13', JSON.stringify(hist));
+                localStorage.setItem('d20_final_v14', JSON.stringify(lib));
+                localStorage.setItem('d20_hist_v14', JSON.stringify(hist));
             }, [lib, hist]);
 
             const getYTID = (u) => u?.match(/(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*embed\/))([^&?\s]{11})/)?.[1];
             const isInsta = (u) => u?.includes('instagram.com');
 
-            // Logic: YouTube auto-plays, Insta defaults to 'playing' but requires manual clock pause
             useEffect(() => {
                 let timer;
-                const active = isPlaying && !timerOverride;
-                if (view === 'workout' && active && workout.seconds > 0) {
+                if (view === 'workout' && isPlaying && !timerOverride && workout.seconds > 0) {
                     timer = setInterval(() => setWorkout(w => ({ ...w, seconds: w.seconds - 1 })), 1000);
                 } else if (view === 'workout' && workout.seconds === 0 && workout.plan.length > 0) {
-                    handleNext();
+                    handleSkip();
                 }
                 return () => clearInterval(timer);
             }, [view, isPlaying, timerOverride, workout.seconds]);
@@ -88,19 +82,19 @@
                             if (playerRef.current?.destroy) playerRef.current.destroy();
                             playerRef.current = new window.YT.Player('yt-player', {
                                 videoId: getYTID(vid.url),
-                                playerVars: { 'autoplay': 1, 'start': vid.start, 'playsinline': 1 },
-                                events: { 'onStateChange': (e) => setIsPlaying(e.data === 1) }
+                                playerVars: { 'autoplay': 1, 'start': vid.start, 'playsinline': 1, 'controls': 1 },
+                                events: { 
+                                    'onStateChange': (e) => setIsPlaying(e.data === 1),
+                                    'onReady': (e) => { if(isMuted) e.target.mute(); }
+                                }
                             });
                         };
                         window.YT ? initYT() : window.onYouTubeIframeAPIReady = initYT;
-                    } else {
-                        // Instagram mode: We can't detect play/pause, so we assume playing
-                        setIsPlaying(true);
-                    }
+                    } else { setIsPlaying(true); }
                 }
             }, [view, workout.idx]);
 
-            const handleNext = () => {
+            const handleSkip = () => {
                 if (workout.idx < workout.plan.length - 1) {
                     const next = workout.idx + 1;
                     setWorkout(w => ({ ...w, idx: next, seconds: parseInt(w.plan[next].dur) * 60 }));
@@ -108,8 +102,16 @@
                 } else { finish(); }
             };
 
+            const toggleMute = () => {
+                if (!isInsta(workout.plan[workout.idx].url) && playerRef.current) {
+                    isMuted ? playerRef.current.unMute() : playerRef.current.mute();
+                }
+                setIsMuted(!isMuted);
+            };
+
             const finish = () => {
-                setHist({...hist, [new Date().toISOString().split('T')[0]]: {mins:20}});
+                const today = new Date().toISOString().split('T')[0];
+                setHist({...hist, [today]: {mins:20}});
                 setView('home'); setSelectedId(null);
             };
 
@@ -131,7 +133,8 @@
                                     ))}
                                 </div>
                                 <button onClick={() => {
-                                    const plan = selectedId ? [lib.find(v => v.id === selectedId), ...lib.filter(v => v.id !== selectedId)].slice(0,3) : lib.sort(() => 0.5 - Math.random()).slice(0,3);
+                                    if(lib.length === 0) return alert("Add videos first!");
+                                    const plan = selectedId ? [lib.find(v => v.id === selectedId), ...lib.filter(v => v.id !== selectedId)].slice(0,4) : lib.sort(() => 0.5 - Math.random()).slice(0,4);
                                     setWorkout({ plan, idx: 0, seconds: parseInt(plan[0].dur) * 60 });
                                     setView('workout');
                                 }}>Start Training</button>
@@ -140,7 +143,8 @@
                             <div className="calendar">
                                 {[...Array(28)].map((_, i) => {
                                     const d = new Date(); d.setDate(d.getDate() - (27 - i));
-                                    return <div key={i} className={`day ${hist[d.toISOString().split('T')[0]] ? 'complete' : ''}`}>{d.getDate()}</div>
+                                    const s = d.toISOString().split('T')[0];
+                                    return <div key={i} className={`day ${hist[s] ? 'complete' : ''}`}>{d.getDate()}</div>
                                 })}
                             </div>
                         </div>
@@ -153,14 +157,14 @@
                                 setLib([{ id: Date.now(), title: f.get('t'), url: f.get('u'), dur: f.get('d'), start: f.get('s') || 0 }, ...lib]);
                                 e.target.reset();
                             }}>
-                                <h3>Add Video (YT or Insta)</h3>
-                                <input name="u" placeholder="Video URL" required />
+                                <h3>Add Video</h3>
+                                <input name="u" placeholder="URL (YouTube or Instagram)" required />
                                 <input name="t" placeholder="Title" required />
                                 <div style={{display:'flex', gap:'10px'}}>
                                     <input name="d" type="number" placeholder="Mins" required />
                                     <input name="s" type="number" placeholder="Start Sec" />
                                 </div>
-                                <button type="submit">Add</button>
+                                <button type="submit">Add to Library</button>
                             </form>
                             <div className="card">
                                 {lib.map(v => (
@@ -175,17 +179,6 @@
                                         </div>
                                     </div>
                                 ))}
-                                <div className="icon-btn-group">
-                                    <button className="icon-btn" onClick={() => {
-                                        const blob = new Blob([JSON.stringify(lib)], {type:'application/json'});
-                                        const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'daily20.json'; a.click();
-                                    }}><ExportIcon /> Export</button>
-                                    <label className="icon-btn"><ImportIcon /> Import
-                                        <input type="file" style={{display:'none'}} onChange={e => {
-                                            const r = new FileReader(); r.onload = (ev) => setLib(JSON.parse(ev.target.result)); r.readAsText(e.target.files[0]);
-                                        }} />
-                                    </label>
-                                </div>
                             </div>
                             <button className="btn-sec" onClick={() => setView('home')}>Back</button>
                         </div>
@@ -200,19 +193,31 @@
                                     <div id="yt-player"></div>
                                 )}
                             </div>
+                            
                             <div className={`status-tag ${!isPlaying ? 'status-paused' : timerOverride ? 'status-manual' : 'status-playing'}`}>
                                 {!isPlaying ? 'II VIDEO PAUSED' : timerOverride ? 'II TIMER PAUSED' : '▶ TIMER ACTIVE'}
                             </div>
+                            
                             <div style={{fontSize:'64px', fontWeight:'900', color: (isPlaying && !timerOverride) ? 'var(--neon)' : 'var(--dim)'}}>
                                 {Math.floor(workout.seconds/60)}:{(workout.seconds%60).toString().padStart(2,'0')}
                             </div>
-                            <h3>{workout.plan[workout.idx].title}</h3>
-                            <div style={{display:'flex', gap:'10px', marginTop:'10px'}}>
-                                <button onClick={() => setTimerOverride(!timerOverride)} style={{background: timerOverride ? 'var(--success)' : 'var(--warning)', flex:1}}>
-                                    {timerOverride ? 'Resume Clock' : 'Pause Clock'}
+                            
+                            <h3 style={{margin:'10px 0'}}>{workout.plan[workout.idx].title}</h3>
+
+                            <button onClick={() => setTimerOverride(!timerOverride)} style={{background: timerOverride ? 'var(--success)' : 'var(--warning)', width:'100%', marginBottom:'10px'}}>
+                                {timerOverride ? 'Resume Clock' : 'Pause Clock'}
+                            </button>
+
+                            <div className="control-grid">
+                                <button className="mini-btn" onClick={toggleMute}>
+                                    {isMuted ? '🔇 Unmute' : '🔊 Mute'}
                                 </button>
-                                <button className="btn-sec" onClick={() => setView('home')} style={{margin:0, flex:1}}>Exit</button>
+                                <button className="mini-btn" onClick={handleSkip}>
+                                    ⏭ Skip Video
+                                </button>
                             </div>
+                            
+                            <button className="btn-sec" onClick={() => setView('home')} style={{width:'100%'}}>Exit Session</button>
                         </div>
                     )}
 
