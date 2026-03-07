@@ -3,21 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Daily20 Pro | Ultimate Sync</title>
+    <title>Daily20 Pro | Independent Timer</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
     <style>
-        :root { --bg: #121212; --card: #1e1e1e; --neon: #ff9900; --text: #ffffff; --dim: #888888; --danger: #ff4d4d; --info: #3498db; }
+        :root { --bg: #121212; --card: #1e1e1e; --neon: #ff9900; --text: #ffffff; --dim: #888888; --danger: #ff4d4d; --info: #3498db; --warning: #f39c12; --success: #2ecc71; }
         body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding: 15px; }
         .container { max-width: 500px; margin: 0 auto; padding-bottom: 60px; }
         .card { background: var(--card); padding: 20px; border-radius: 16px; margin-bottom: 15px; border: 1px solid #333; position: relative; }
         input { background: #2a2a2a; border: 1px solid #444; color: white; padding: 12px; border-radius: 8px; margin-bottom: 10px; width: 100%; box-sizing: border-box; font-size: 16px; }
-        button { background: var(--neon); color: black; border: none; padding: 14px; border-radius: 10px; font-weight: 800; width: 100%; cursor: pointer; text-transform: uppercase; }
+        button { background: var(--neon); color: black; border: none; padding: 14px; border-radius: 10px; font-weight: 800; width: 100%; cursor: pointer; text-transform: uppercase; transition: 0.2s; }
+        button:active { transform: scale(0.98); }
         .btn-sec { background: #333; color: white; margin-top: 10px; }
         
-        /* Icon Button Styles */
         .icon-btn-group { display: flex; gap: 10px; margin-top: 15px; justify-content: center; }
         .icon-btn { background: #2a2a2a; border: 1px solid #444; color: var(--text); padding: 12px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex: 1; transition: 0.2s; }
         .icon-btn:active { background: #333; transform: scale(0.95); }
@@ -33,11 +33,11 @@
         .day { aspect-ratio: 1; background: #2a2a2a; display: flex; align-items: center; justify-content: center; font-size: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; color: var(--dim); }
         .day.complete { background: var(--neon); color: black; }
 
-        /* Video Player Styles */
         #player { width: 100%; aspect-ratio: 16/9; border-radius: 16px; overflow: hidden; background: #000; margin-bottom: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .status-tag { display: inline-block; padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: bold; margin-bottom: 5px; transition: 0.3s; }
         .status-paused { background: var(--danger); color: white; }
-        .status-playing { background: #2ecc71; color: black; box-shadow: 0 0 10px rgba(46, 204, 113, 0.4); }
+        .status-playing { background: var(--success); color: black; box-shadow: 0 0 10px rgba(46, 204, 113, 0.4); }
+        .status-manual { background: var(--warning); color: black; }
         
         .lib-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #2a2a2a; }
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: flex; align-items: center; justify-content: center; z-index: 3000; padding: 20px; }
@@ -59,8 +59,8 @@
 
         const App = () => {
             const [view, setView] = useState('home');
-            const [lib, setLib] = useState(() => JSON.parse(localStorage.getItem('d20_final_v11') || '[]'));
-            const [hist, setHist] = useState(() => JSON.parse(localStorage.getItem('d20_hist_v11') || '{}'));
+            const [lib, setLib] = useState(() => JSON.parse(localStorage.getItem('d20_final_v12') || '[]'));
+            const [hist, setHist] = useState(() => JSON.parse(localStorage.getItem('d20_hist_v12') || '{}'));
             const [selectedId, setSelectedId] = useState(null);
             const [isDone, setIsDone] = useState(false);
             const [editingVid, setEditingVid] = useState(null);
@@ -68,33 +68,35 @@
             // Workout & Player State
             const [workout, setWorkout] = useState({ plan: [], idx: 0, seconds: 0 });
             const [isPlaying, setIsPlaying] = useState(false);
+            const [timerOverride, setTimerOverride] = useState(false); // NEW: Manual timer pause
             const playerRef = useRef(null);
 
             useEffect(() => {
-                localStorage.setItem('d20_final_v11', JSON.stringify(lib));
-                localStorage.setItem('d20_hist_v11', JSON.stringify(hist));
+                localStorage.setItem('d20_final_v12', JSON.stringify(lib));
+                localStorage.setItem('d20_hist_v12', JSON.stringify(hist));
             }, [lib, hist]);
 
-            // Timer logic (Syncs with isPlaying)
+            // Timer logic (Syncs with isPlaying AND !timerOverride)
             useEffect(() => {
                 let timer;
-                if (view === 'workout' && isPlaying && workout.seconds > 0) {
+                if (view === 'workout' && isPlaying && !timerOverride && workout.seconds > 0) {
                     timer = setInterval(() => setWorkout(w => ({ ...w, seconds: w.seconds - 1 })), 1000);
                 } else if (view === 'workout' && workout.seconds === 0 && workout.plan.length > 0) {
                     if (workout.idx < workout.plan.length - 1) {
                         const nextIdx = workout.idx + 1;
                         setWorkout(w => ({ ...w, idx: nextIdx, seconds: parseInt(w.plan[nextIdx].dur) * 60 }));
+                        setTimerOverride(false); // Reset override for next video
                     } else { finishSession(); }
                 }
                 return () => clearInterval(timer);
-            }, [view, isPlaying, workout.seconds]);
+            }, [view, isPlaying, timerOverride, workout.seconds]);
 
             // YouTube Player Setup
             useEffect(() => {
                 if (view === 'workout' && workout.plan.length > 0) {
                     const initPlayer = () => {
                         if (playerRef.current && typeof playerRef.current.destroy === 'function') {
-                            playerRef.current.destroy(); // Clean up previous instance
+                            playerRef.current.destroy();
                         }
                         const currentVid = workout.plan[workout.idx];
                         playerRef.current = new window.YT.Player('player', {
@@ -102,8 +104,8 @@
                             playerVars: { 'autoplay': 1, 'start': currentVid.start, 'rel': 0, 'modestbranding': 1, 'playsinline': 1 },
                             events: {
                                 'onStateChange': (event) => {
-                                    if (event.data === 1) setIsPlaying(true); // Playing
-                                    else setIsPlaying(false); // Paused/Buffering/Ended
+                                    if (event.data === 1) setIsPlaying(true);
+                                    else setIsPlaying(false);
                                 }
                             }
                         });
@@ -148,15 +150,27 @@
                 for (let v of others) { if (total + parseInt(v.dur) <= 21) { plan.push(v); total += parseInt(v.dur); } }
                 
                 setWorkout({ plan, idx: 0, seconds: parseInt(plan[0].dur) * 60 });
+                setTimerOverride(false); // Ensure override is off when starting
                 setView('workout');
             };
 
             const finishSession = () => {
                 const today = new Date().toISOString().split('T')[0];
                 setHist({ ...hist, [today]: { mins: 20 } });
-                setIsDone(true); setView('home'); setSelectedId(null);
+                setIsDone(true); setView('home'); setSelectedId(null); setTimerOverride(false);
                 setTimeout(() => setIsDone(false), 5000);
             };
+
+            // Status Badge Logic
+            let statusText = 'II VIDEO PAUSED';
+            let statusClass = 'status-paused';
+            if (isPlaying && !timerOverride) {
+                statusText = '▶ TIMER ACTIVE';
+                statusClass = 'status-playing';
+            } else if (isPlaying && timerOverride) {
+                statusText = 'II TIMER PAUSED';
+                statusClass = 'status-manual';
+            }
 
             return (
                 <div className="container">
@@ -258,16 +272,31 @@
                         <div style={{textAlign: 'center'}}>
                             <div id="player"></div>
                             
-                            <div className={`status-tag ${isPlaying ? 'status-playing' : 'status-paused'}`}>
-                                {isPlaying ? '▶ TIMER ACTIVE' : 'II PAUSED'}
+                            <div className={`status-tag ${statusClass}`}>
+                                {statusText}
                             </div>
                             
-                            <div style={{fontSize:'64px', fontWeight:'900', color: isPlaying ? 'var(--neon)' : 'var(--dim)', transition: '0.3s'}}>
+                            <div style={{fontSize:'64px', fontWeight:'900', color: (isPlaying && !timerOverride) ? 'var(--neon)' : 'var(--dim)', transition: '0.3s'}}>
                                 {Math.floor(workout.seconds / 60)}:{(workout.seconds % 60).toString().padStart(2, '0')}
                             </div>
                             
                             <h3 style={{margin:'10px 0'}}>{workout.plan[workout.idx].title}</h3>
-                            <button className="btn-sec" onClick={() => { setIsPlaying(false); setView('home'); }}>Exit Session</button>
+                            
+                            <div style={{display: 'flex', gap: '10px', marginTop: '15px'}}>
+                                <button 
+                                    onClick={() => setTimerOverride(!timerOverride)} 
+                                    style={{ background: timerOverride ? 'var(--success)' : 'var(--warning)', color: 'black', flex: 1, padding: '12px', fontSize: '14px' }}
+                                >
+                                    {timerOverride ? 'Resume Timer' : 'Pause Timer'}
+                                </button>
+                                <button 
+                                    className="btn-sec" 
+                                    onClick={() => { setIsPlaying(false); setView('home'); }} 
+                                    style={{ marginTop: 0, flex: 1, padding: '12px', fontSize: '14px' }}
+                                >
+                                    Exit Session
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
