@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Daily20 Pro | v21</title>
+    <title>Daily20 Pro | v22</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -17,13 +17,11 @@
         button { background: var(--neon); color: black; border: none; padding: 12px; border-radius: 10px; font-weight: 800; width: 100%; cursor: pointer; text-transform: uppercase; }
         .btn-sec { background: #333; color: white; margin-top: 8px; }
         
-        /* Player */
         .player-wrapper { width: 100%; border-radius: 16px; overflow: hidden; background: #000; border: 1px solid #333; margin-bottom: 8px; position: relative; }
         .ratio-yt { aspect-ratio: 16/9; }
         .ratio-insta { aspect-ratio: 9/16; max-height: 55vh; }
         #yt-player, .insta-player { width: 100%; height: 100%; border: 0; display: block; }
 
-        /* Calendar */
         .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
         .cal-cell { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 11px; border-radius: 6px; background: #2a2a2a; color: #555; }
@@ -31,12 +29,10 @@
         .complete { background: var(--neon); color: black; font-weight: bold; }
         .today { border: 1px solid var(--neon); }
         
-        /* History List */
         .hist-item { padding: 10px; border-left: 3px solid var(--neon); background: #252525; border-radius: 4px; margin-top: 8px; font-size: 12px; }
         .hist-date { color: var(--neon); font-weight: bold; margin-bottom: 4px; }
         .hist-vids { color: var(--dim); font-style: italic; }
 
-        /* Icons & UI */
         .lib-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #2a2a2a; }
         .icon-btn-group { display: flex; gap: 10px; margin-top: 15px; }
         .icon-btn { background: #2a2a2a; border: 1px solid #444; color: white; padding: 10px; border-radius: 10px; flex: 1; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; }
@@ -56,8 +52,8 @@
 
         const App = () => {
             const [view, setView] = useState('home');
-            const [lib, setLib] = useState(() => JSON.parse(localStorage.getItem('d20_v21_lib') || '[]'));
-            const [hist, setHist] = useState(() => JSON.parse(localStorage.getItem('d20_v21_hist') || '{}'));
+            const [lib, setLib] = useState(() => JSON.parse(localStorage.getItem('d20_v22_lib') || '[]'));
+            const [hist, setHist] = useState(() => JSON.parse(localStorage.getItem('d20_v22_hist') || '{}'));
             const [selectedId, setSelectedId] = useState(null);
             const [editingVid, setEditingVid] = useState(null);
             const [calDate, setCalDate] = useState(new Date());
@@ -67,8 +63,8 @@
             const playerRef = useRef(null);
 
             useEffect(() => {
-                localStorage.setItem('d20_v21_lib', JSON.stringify(lib));
-                localStorage.setItem('d20_v21_hist', JSON.stringify(hist));
+                localStorage.setItem('d20_v22_lib', JSON.stringify(lib));
+                localStorage.setItem('d20_v22_hist', JSON.stringify(hist));
             }, [lib, hist]);
 
             const getYTID = (u) => u?.match(/(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*embed\/))([^&?\s]{11})/)?.[1];
@@ -115,6 +111,47 @@
                 const titles = workout.plan.map(v => v.title).join(", ");
                 setHist({...hist, [today]: { complete: true, videos: titles }});
                 setView('home'); setSelectedId(null);
+            };
+
+            const handleExport = () => {
+                const blob = new Blob([JSON.stringify({lib, hist})], {type:'application/json'});
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'daily20_backup.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            };
+
+            const handleImport = (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const r = new FileReader();
+                r.onload = (ev) => {
+                    try {
+                        const data = JSON.parse(ev.target.result);
+                        // Legacy support: If it's an old backup (just an array)
+                        if (Array.isArray(data)) {
+                            setLib(data);
+                            alert("Legacy library imported successfully!");
+                        } 
+                        // New support: Object containing lib and/or hist
+                        else if (data.lib || data.hist) {
+                            if (data.lib) setLib(data.lib);
+                            if (data.hist) setHist(data.hist);
+                            alert("Backup imported successfully!");
+                        } else {
+                            alert("Unrecognized backup format.");
+                        }
+                    } catch (err) {
+                        alert("Error reading backup file. Make sure it's a valid JSON.");
+                    }
+                };
+                r.readAsText(file);
+                e.target.value = ''; // Reset input so you can import the same file again if needed
             };
 
             const daysArr = [];
@@ -205,24 +242,14 @@
                                     </div>
                                 ))}
                                 <div className="icon-btn-group">
-                                    <div className="icon-btn" onClick={() => {
-                                        const blob = new Blob([JSON.stringify({lib, hist})], {type:'application/json'});
-                                        const url = URL.createObjectURL(blob);
-                                        const a = document.createElement('a'); a.href = url; a.download = 'daily20_v21_backup.json'; a.click();
-                                    }}>
+                                    <div className="icon-btn" onClick={handleExport}>
                                         <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m12-7-5-5-5 5m5-5v12"/></svg>
                                         Export
                                     </div>
                                     <label className="icon-btn">
                                         <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5m-5 5V3"/></svg>
                                         Import
-                                        <input type="file" style={{display:'none'}} onChange={e => {
-                                            const r = new FileReader(); r.onload = (ev) => {
-                                                const data = JSON.parse(ev.target.result);
-                                                if(data.lib) setLib(data.lib);
-                                                if(data.hist) setHist(data.hist);
-                                            }; r.readAsText(e.target.files[0]);
-                                        }} />
+                                        <input type="file" style={{display:'none'}} accept=".json" onChange={handleImport} />
                                     </label>
                                 </div>
                             </div>
