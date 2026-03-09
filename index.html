@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Daily20 Pro | v42</title>
+    <title>Daily20 Pro | v44</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -25,13 +25,22 @@
         .icon-btn svg { width: 18px; height: 18px; stroke: var(--neon); fill: none; stroke-width: 2.5; margin-right: 8px; }
 
         .carousel { display: flex; overflow-x: auto; gap: 12px; padding: 10px 5px; margin-bottom: 15px; scrollbar-width: none; align-items: flex-start; }
-        .carousel-item { flex: 0 0 110px; text-align: center; cursor: pointer; transition: transform 0.2s ease; }
-        .carousel-thumb { width: 110px; height: 62px; border-radius: 10px; object-fit: cover; border: 2px solid transparent; transition: all 0.2s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .carousel-item { flex: 0 0 115px; text-align: center; cursor: pointer; transition: transform 0.2s ease; }
         
-        /* Selection Styles */
+        /* Thumbnail Container */
+        .thumb-wrap { position: relative; width: 115px; height: 65px; border-radius: 10px; overflow: hidden; border: 2px solid transparent; transition: all 0.2s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .carousel-thumb { width: 100%; height: 100%; object-fit: cover; }
+        
+        /* Duration Badge */
+        .dur-badge { position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.85); color: white; font-size: 10px; font-weight: bold; padding: 2px 5px; border-radius: 4px; letter-spacing: 0.5px; }
+
         .carousel-item.selected { transform: translateY(-4px); }
-        .carousel-item.selected .carousel-thumb { border-color: var(--neon); box-shadow: 0 0 15px rgba(255, 153, 0, 0.4); }
+        .carousel-item.selected .thumb-wrap { border-color: var(--neon); box-shadow: 0 0 15px rgba(255, 153, 0, 0.4); }
         .carousel-item.selected div { color: var(--neon) !important; font-weight: bold; }
+
+        .goal-selector { display: flex; gap: 8px; margin-bottom: 15px; }
+        .goal-btn { flex: 1; padding: 10px; border-radius: 8px; background: #2a2a2a; border: 1px solid #444; color: white; font-weight: bold; cursor: pointer; }
+        .goal-btn.active { background: var(--neon); color: black; border-color: var(--neon); }
 
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 15px; }
         .cal-day { aspect-ratio: 1; border-radius: 6px; background: #2a2a2a; font-size: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
@@ -61,6 +70,7 @@
             const [view, setView] = useState('home');
             const [lib, setLib] = useState(() => JSON.parse(localStorage.getItem('d20_core_lib')) || []);
             const [hist, setHist] = useState(() => JSON.parse(localStorage.getItem('d20_core_hist')) || {});
+            const [goal, setGoal] = useState(() => parseInt(localStorage.getItem('d20_core_goal')) || 20);
             const [selectedId, setSelectedId] = useState(null);
             
             const [inspectingDate, setInspectingDate] = useState(null);
@@ -77,7 +87,8 @@
             useEffect(() => {
                 localStorage.setItem('d20_core_lib', JSON.stringify(lib));
                 localStorage.setItem('d20_core_hist', JSON.stringify(hist));
-            }, [lib, hist]);
+                localStorage.setItem('d20_core_goal', goal.toString());
+            }, [lib, hist, goal]);
 
             const fromSecs = (s) => `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
             const toSecs = (str) => {
@@ -143,13 +154,15 @@
                     {view === 'home' && (
                         <main>
                             <div className="card">
-                                <label>Tap a video to start with it</label>
                                 <div className="carousel">
                                     {lib.map(v => (
                                         <div key={v.id} 
                                              className={`carousel-item ${selectedId === v.id ? 'selected' : ''}`}
                                              onClick={() => setSelectedId(v.id === selectedId ? null : v.id)}>
-                                            <img className="carousel-thumb" src={isInsta(v.url) ? 'https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg' : `https://img.youtube.com/vi/${getYTID(v.url)}/mqdefault.jpg`} />
+                                            <div className="thumb-wrap">
+                                                <img className="carousel-thumb" src={isInsta(v.url) ? 'https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg' : `https://img.youtube.com/vi/${getYTID(v.url)}/mqdefault.jpg`} />
+                                                <div className="dur-badge">{fromSecs(v.durSec - (v.startSec || 0))}</div>
+                                            </div>
                                             <div style={{fontSize:9, marginTop:5, color:'white', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{v.title}</div>
                                         </div>
                                     ))}
@@ -168,13 +181,13 @@
                             </div>
 
                             <div className="daily-stat card" style={{textAlign:'center'}}>
-                                <div style={{fontSize:38, fontWeight:900}}><span style={{color:'var(--neon)'}}>{hist[todayKey]?.totalMins || 0}</span> / 20m</div>
+                                <div style={{fontSize:38, fontWeight:900}}><span style={{color:'var(--neon)'}}>{hist[todayKey]?.totalMins || 0}</span> / {goal}m</div>
                                 <div className="cal-grid">
                                     {Array.from({length:28}).map((_, i) => {
                                         const d = new Date(); d.setDate(d.getDate() - (27 - i));
                                         const k = d.toISOString().split('T')[0];
                                         return (
-                                            <div key={k} className={`cal-day ${(hist[k]?.totalMins || 0) >= 20 ? 'done' : ''} ${k === todayKey ? 'today' : ''}`} onClick={() => setInspectingDate({full: d.toDateString(), key: k})}>
+                                            <div key={k} className={`cal-day ${(hist[k]?.totalMins || 0) >= goal ? 'done' : ''} ${k === todayKey ? 'today' : ''}`} onClick={() => setInspectingDate({full: d.toDateString(), key: k})}>
                                                 {d.getDate()}
                                                 <small style={{fontSize:7}}>{hist[k]?.totalMins || 0}m</small>
                                             </div>
@@ -190,7 +203,7 @@
                             <div className="icon-btn-group">
                                 <div className="icon-btn" onClick={() => setView('home')}><Icons.Back /> Back</div>
                                 <div className="icon-btn" onClick={() => {
-                                    const blob = new Blob([JSON.stringify({lib, hist})], {type:'application/json'});
+                                    const blob = new Blob([JSON.stringify({lib, hist, goal})], {type:'application/json'});
                                     const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
                                     a.download = `daily20_backup.json`; a.click();
                                 }}><Icons.Export /> Export</div>
@@ -198,10 +211,24 @@
                                     <Icons.Import /> Import
                                     <input type="file" style={{display:'none'}} accept=".json" onChange={(e) => {
                                         const r = new FileReader();
-                                        r.onload = (ev) => { const d = JSON.parse(ev.target.result); setLib(d.lib || []); setHist(d.hist || {}); };
+                                        r.onload = (ev) => { 
+                                            const d = JSON.parse(ev.target.result); 
+                                            if (d.lib) setLib(d.lib);
+                                            if (d.hist) setHist(d.hist);
+                                            if (d.goal) setGoal(d.goal);
+                                        };
                                         r.readAsText(e.target.files[0]);
                                     }} />
                                 </label>
+                            </div>
+
+                            <div className="card">
+                                <label>Daily Training Goal (Mins)</label>
+                                <div className="goal-selector">
+                                    {[10, 20, 40, 60].map(val => (
+                                        <button key={val} className={`goal-btn ${goal === val ? 'active' : ''}`} onClick={() => setGoal(val)}>{val}m</button>
+                                    ))}
+                                </div>
                             </div>
 
                             <form className="card" onSubmit={e => {
