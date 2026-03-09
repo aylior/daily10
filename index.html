@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Daily20 Pro | v41</title>
+    <title>Daily20 Pro | v42</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -17,12 +17,21 @@
         label { display: block; font-size: 11px; color: var(--neon); margin-bottom: 4px; font-weight: bold; text-transform: uppercase; }
         input, textarea { background: #2a2a2a; border: 1px solid #444; color: white; padding: 10px; border-radius: 8px; width: 100%; box-sizing: border-box; font-size: 14px; margin-bottom: 12px; }
         button { background: var(--neon); color: black; border: none; padding: 14px; border-radius: 10px; font-weight: 800; width: 100%; cursor: pointer; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        button:disabled { opacity: 0.3; cursor: not-allowed; }
         .btn-sec { background: #333; color: white; margin-top: 8px; }
 
-        /* Icon Button Group */
         .icon-btn-group { display: flex; gap: 10px; margin-bottom: 15px; }
-        .icon-btn { background: #2a2a2a; border: 1px solid #444; color: white; padding: 12px; border-radius: 12px; flex: 1; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; cursor: pointer; text-transform: none; }
+        .icon-btn { background: #2a2a2a; border: 1px solid #444; color: white; padding: 12px; border-radius: 12px; flex: 1; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; cursor: pointer; }
         .icon-btn svg { width: 18px; height: 18px; stroke: var(--neon); fill: none; stroke-width: 2.5; margin-right: 8px; }
+
+        .carousel { display: flex; overflow-x: auto; gap: 12px; padding: 10px 5px; margin-bottom: 15px; scrollbar-width: none; align-items: flex-start; }
+        .carousel-item { flex: 0 0 110px; text-align: center; cursor: pointer; transition: transform 0.2s ease; }
+        .carousel-thumb { width: 110px; height: 62px; border-radius: 10px; object-fit: cover; border: 2px solid transparent; transition: all 0.2s ease; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        
+        /* Selection Styles */
+        .carousel-item.selected { transform: translateY(-4px); }
+        .carousel-item.selected .carousel-thumb { border-color: var(--neon); box-shadow: 0 0 15px rgba(255, 153, 0, 0.4); }
+        .carousel-item.selected div { color: var(--neon) !important; font-weight: bold; }
 
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 15px; }
         .cal-day { aspect-ratio: 1; border-radius: 6px; background: #2a2a2a; font-size: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
@@ -34,9 +43,6 @@
         #yt-player, .player-frame iframe { width: 100% !important; height: 100% !important; position: absolute; top: 0; left: 0; }
 
         .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .carousel { display: flex; overflow-x: auto; gap: 10px; padding: 5px 0; margin-bottom: 15px; scrollbar-width: none; }
-        .carousel-item { flex: 0 0 100px; text-align: center; }
-        .carousel-thumb { width: 100px; height: 60px; border-radius: 8px; object-fit: cover; border: 2px solid transparent; }
     </style>
 </head>
 <body>
@@ -55,9 +61,8 @@
             const [view, setView] = useState('home');
             const [lib, setLib] = useState(() => JSON.parse(localStorage.getItem('d20_core_lib')) || []);
             const [hist, setHist] = useState(() => JSON.parse(localStorage.getItem('d20_core_hist')) || {});
-            const [goal] = useState(20);
+            const [selectedId, setSelectedId] = useState(null);
             
-            const [editingId, setEditingId] = useState(null);
             const [inspectingDate, setInspectingDate] = useState(null);
             const [isEditingHist, setIsEditingHist] = useState(false);
             const [showSummary, setShowSummary] = useState(null);
@@ -84,29 +89,10 @@
             const getYTID = (u) => u?.match(/(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*embed\/))([^&?\s]{11})/)?.[1];
             const isInsta = (u) => u?.includes('instagram.com');
 
-            const handleExport = () => {
-                const blob = new Blob([JSON.stringify({lib, hist})], {type:'application/json'});
-                const a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = `daily20_backup_${todayKey}.json`;
-                a.click();
-            };
-
-            const handleImport = (e) => {
-                const r = new FileReader();
-                r.onload = (ev) => {
-                    try {
-                        const d = JSON.parse(ev.target.result);
-                        if(d.lib) setLib(d.lib);
-                        if(d.hist) setHist(d.hist);
-                        alert("Data Imported!");
-                    } catch(err) { alert("Invalid File"); }
-                };
-                if(e.target.files[0]) r.readAsText(e.target.files[0]);
-            };
-
-            const logProgress = (video) => {
+            const handleNext = () => {
+                const video = workout.plan[workout.idx];
                 const minsWon = Math.ceil((video.durSec - (video.startSec || 0)) / 60);
+                
                 setHist(prev => {
                     const existing = prev[todayKey] || { totalMins: 0, videos: "" };
                     return { ...prev, [todayKey]: {
@@ -114,16 +100,12 @@
                         videos: existing.videos + (existing.videos ? ", " : "") + video.title
                     }};
                 });
-                setWorkout(w => ({ ...w, sessionMins: w.sessionMins + minsWon }));
-            };
 
-            const handleNext = () => {
-                logProgress(workout.plan[workout.idx]);
                 if (workout.idx + 1 < workout.plan.length) {
                     const nxt = workout.idx + 1;
-                    setWorkout(w => ({ ...w, idx: nxt, seconds: w.plan[nxt].durSec - (w.plan[nxt].startSec || 0) }));
+                    setWorkout(w => ({ ...w, idx: nxt, seconds: w.plan[nxt].durSec - (w.plan[nxt].startSec || 0), sessionMins: w.sessionMins + minsWon }));
                 } else {
-                    setShowSummary({ mins: workout.sessionMins + Math.ceil((workout.plan[workout.idx].durSec - (workout.plan[workout.idx].startSec || 0))/60) });
+                    setShowSummary({ mins: workout.sessionMins + minsWon });
                     setView('home');
                 }
             };
@@ -161,16 +143,24 @@
                     {view === 'home' && (
                         <main>
                             <div className="card">
+                                <label>Tap a video to start with it</label>
                                 <div className="carousel">
                                     {lib.map(v => (
-                                        <div key={v.id} className="carousel-item">
+                                        <div key={v.id} 
+                                             className={`carousel-item ${selectedId === v.id ? 'selected' : ''}`}
+                                             onClick={() => setSelectedId(v.id === selectedId ? null : v.id)}>
                                             <img className="carousel-thumb" src={isInsta(v.url) ? 'https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg' : `https://img.youtube.com/vi/${getYTID(v.url)}/mqdefault.jpg`} />
-                                            <div style={{fontSize:9}}>{v.title}</div>
+                                            <div style={{fontSize:9, marginTop:5, color:'white', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{v.title}</div>
                                         </div>
                                     ))}
                                 </div>
                                 <button disabled={lib.length === 0} onClick={() => {
-                                    const plan = [...lib].sort(() => 0.5 - Math.random()).slice(0, 4);
+                                    let pool = [...lib].sort(() => 0.5 - Math.random());
+                                    if (selectedId) {
+                                        const first = lib.find(x => x.id === selectedId);
+                                        pool = [first, ...pool.filter(x => x.id !== selectedId)];
+                                    }
+                                    const plan = pool.slice(0, 4);
                                     setWorkout({ plan, idx: 0, seconds: plan[0].durSec - (plan[0].startSec || 0), sessionMins: 0 });
                                     setView('workout');
                                 }}>Start Training</button>
@@ -178,13 +168,13 @@
                             </div>
 
                             <div className="daily-stat card" style={{textAlign:'center'}}>
-                                <div style={{fontSize:38, fontWeight:900}}><span style={{color:'var(--neon)'}}>{hist[todayKey]?.totalMins || 0}</span> / {goal}m</div>
+                                <div style={{fontSize:38, fontWeight:900}}><span style={{color:'var(--neon)'}}>{hist[todayKey]?.totalMins || 0}</span> / 20m</div>
                                 <div className="cal-grid">
                                     {Array.from({length:28}).map((_, i) => {
                                         const d = new Date(); d.setDate(d.getDate() - (27 - i));
                                         const k = d.toISOString().split('T')[0];
                                         return (
-                                            <div key={k} className={`cal-day ${(hist[k]?.totalMins || 0) >= goal ? 'done' : ''} ${k === todayKey ? 'today' : ''}`} onClick={() => setInspectingDate({full: d.toDateString(), key: k})}>
+                                            <div key={k} className={`cal-day ${(hist[k]?.totalMins || 0) >= 20 ? 'done' : ''} ${k === todayKey ? 'today' : ''}`} onClick={() => setInspectingDate({full: d.toDateString(), key: k})}>
                                                 {d.getDate()}
                                                 <small style={{fontSize:7}}>{hist[k]?.totalMins || 0}m</small>
                                             </div>
@@ -199,10 +189,18 @@
                         <main>
                             <div className="icon-btn-group">
                                 <div className="icon-btn" onClick={() => setView('home')}><Icons.Back /> Back</div>
-                                <div className="icon-btn" onClick={handleExport}><Icons.Export /> Export</div>
+                                <div className="icon-btn" onClick={() => {
+                                    const blob = new Blob([JSON.stringify({lib, hist})], {type:'application/json'});
+                                    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+                                    a.download = `daily20_backup.json`; a.click();
+                                }}><Icons.Export /> Export</div>
                                 <label className="icon-btn">
                                     <Icons.Import /> Import
-                                    <input type="file" style={{display:'none'}} accept=".json" onChange={handleImport} />
+                                    <input type="file" style={{display:'none'}} accept=".json" onChange={(e) => {
+                                        const r = new FileReader();
+                                        r.onload = (ev) => { const d = JSON.parse(ev.target.result); setLib(d.lib || []); setHist(d.hist || {}); };
+                                        r.readAsText(e.target.files[0]);
+                                    }} />
                                 </label>
                             </div>
 
@@ -222,26 +220,12 @@
 
                             <div className="card">
                                 {lib.map(v => (
-                                    <div key={v.id}>
-                                        <div style={{display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:'1px solid #333'}}>
-                                            <div style={{flex:1}}>
-                                                <div style={{fontWeight:'bold'}}>{v.title}</div>
-                                                <small style={{color:'var(--dim)'}}>Training: {fromSecs(v.durSec - (v.startSec || 0))}</small>
-                                            </div>
-                                            <button style={{width:40}} onClick={() => setEditingId(editingId === v.id ? null : v.id)}>✎</button>
-                                            <button style={{width:40, background:'var(--danger)'}} onClick={() => setLib(lib.filter(x => x.id !== v.id))}>✕</button>
+                                    <div key={v.id} style={{display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:'1px solid #333'}}>
+                                        <div style={{flex:1}}>
+                                            <div style={{fontWeight:'bold'}}>{v.title}</div>
+                                            <small style={{color:'var(--dim)'}}>Net Training: {fromSecs(v.durSec - (v.startSec || 0))}</small>
                                         </div>
-                                        {editingId === v.id && (
-                                            <div style={{padding:10, background:'#111', borderRadius:8, marginTop:10}}>
-                                                <label>Title</label><input defaultValue={v.title} id={`et-${v.id}`} />
-                                                <label>End Time</label><input defaultValue={fromSecs(v.durSec)} id={`ed-${v.id}`} />
-                                                <label>Start Time</label><input defaultValue={fromSecs(v.startSec || 0)} id={`es-${v.id}`} />
-                                                <button style={{background:'var(--success)', color:'white', textTransform:'none'}} onClick={() => {
-                                                    setLib(lib.map(x => x.id === v.id ? {...x, title: document.getElementById(`et-${v.id}`).value, durSec: toSecs(document.getElementById(`ed-${v.id}`).value), startSec: toSecs(document.getElementById(`es-${v.id}`).value)} : x));
-                                                    setEditingId(null);
-                                                }}>Save changes</button>
-                                            </div>
-                                        )}
+                                        <button style={{width:40, background:'var(--danger)'}} onClick={() => setLib(lib.filter(x => x.id !== v.id))}>✕</button>
                                     </div>
                                 ))}
                             </div>
@@ -277,7 +261,7 @@
                                 {isEditingHist ? (
                                     <div>
                                         <label>Minutes</label><input type="number" id="h-m" defaultValue={hist[inspectingDate.key]?.totalMins || 0} />
-                                        <label>Vids</label><textarea id="h-v" defaultValue={hist[inspectingDate.key]?.videos || ""} />
+                                        <label>Logs</label><textarea id="h-v" defaultValue={hist[inspectingDate.key]?.videos || ""} />
                                         <button onClick={() => {
                                             setHist({...hist, [inspectingDate.key]: {totalMins: parseInt(document.getElementById('h-m').value), videos: document.getElementById('h-v').value}});
                                             setIsEditingHist(false);
@@ -298,7 +282,7 @@
                     {showSummary && (
                         <div className="overlay" onClick={() => setShowSummary(null)}>
                             <div className="card" style={{textAlign:'center', width:'80%'}}>
-                                <h1 style={{color:'var(--neon)'}}>DONE!</h1>
+                                <h1 style={{color:'var(--neon)'}}>SESSION OVER!</h1>
                                 <div style={{fontSize:60, fontWeight:900}}>+{showSummary.mins}m</div>
                                 <button onClick={() => setShowSummary(null)}>Awesome</button>
                             </div>
