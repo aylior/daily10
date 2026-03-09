@@ -3,34 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Daily20 Pro | v38</title>
+    <title>Daily20 Pro | v39</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://www.youtube.com/iframe_api"></script>
     <style>
-        :root { --bg: #121212; --card: #1e1e1e; --neon: #ff9900; --text: #ffffff; --dim: #888888; --danger: #ff4d4d; --success: #2ecc71; }
+        :root { --bg: #121212; --card: #1e1e1e; --neon: #ff9900; --text: #ffffff; --dim: #888888; --danger: #ff4d4d; --success: #2ecc71; --warning: #f39c12; }
         body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding: 10px; overflow-x: hidden; }
         .container { max-width: 500px; margin: 0 auto; padding-bottom: 50px; }
         .card { background: var(--card); padding: 15px; border-radius: 16px; margin-bottom: 12px; border: 1px solid #333; }
+        
         label { display: block; font-size: 11px; color: var(--neon); margin-bottom: 4px; font-weight: bold; text-transform: uppercase; }
         input, textarea { background: #2a2a2a; border: 1px solid #444; color: white; padding: 10px; border-radius: 8px; width: 100%; box-sizing: border-box; font-size: 14px; margin-bottom: 12px; }
         button { background: var(--neon); color: black; border: none; padding: 14px; border-radius: 10px; font-weight: 800; width: 100%; cursor: pointer; text-transform: uppercase; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .btn-sec { background: #333; color: white; margin-top: 8px; }
+
+        /* Icon Buttons */
         .icon-btn-group { display: flex; gap: 10px; margin-bottom: 15px; }
         .icon-btn { background: #2a2a2a; border: 1px solid #444; color: white; padding: 12px; border-radius: 12px; flex: 1; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: bold; cursor: pointer; text-transform: none; }
         .icon-btn svg { width: 18px; height: 18px; stroke: var(--neon); fill: none; stroke-width: 2.5; margin-right: 8px; }
+
+        /* Calendar */
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 15px; }
         .cal-day { aspect-ratio: 1; border-radius: 6px; background: #2a2a2a; font-size: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; }
         .cal-day.done { background: var(--neon); color: black; font-weight: bold; }
         .cal-day.today { border: 1.5px solid var(--neon); }
+
+        /* Media List */
         .lib-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #333; }
         .lib-thumb { width: 50px; height: 30px; border-radius: 4px; object-fit: cover; }
+        
         .carousel { display: flex; overflow-x: auto; gap: 10px; padding: 5px 0; margin-bottom: 15px; scrollbar-width: none; }
         .carousel-item { flex: 0 0 100px; text-align: center; cursor: pointer; }
         .carousel-thumb { width: 100px; height: 60px; border-radius: 8px; object-fit: cover; border: 2px solid transparent; }
         .selected .carousel-thumb { border-color: var(--neon); transform: scale(1.05); }
-        .player-wrapper { width: 100%; border-radius: 16px; overflow: hidden; background: #000; aspect-ratio: 16/9; margin-bottom: 15px; }
+
+        /* Responsive Player Containers */
+        .player-frame { width: 100%; background: #000; border-radius: 16px; overflow: hidden; position: relative; border: 1px solid #333; margin-bottom: 12px; }
+        .ratio-16-9 { aspect-ratio: 16 / 9; }
+        .ratio-insta { aspect-ratio: 1 / 1.2; max-height: 60vh; }
+        .player-frame iframe, .player-frame div { width: 100% !important; height: 100% !important; position: absolute; top: 0; left: 0; }
+
         .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
     </style>
 </head>
@@ -48,8 +62,8 @@
 
         const App = () => {
             const [view, setView] = useState('home');
-            const [lib, setLib] = useState(() => JSON.parse(localStorage.getItem('d20_v38_lib')) || []);
-            const [hist, setHist] = useState(() => JSON.parse(localStorage.getItem('d20_v38_hist')) || {});
+            const [lib, setLib] = useState(() => JSON.parse(localStorage.getItem('d20_v39_lib')) || []);
+            const [hist, setHist] = useState(() => JSON.parse(localStorage.getItem('d20_v39_hist')) || {});
             const [goal, setGoal] = useState(20);
             
             const [editingId, setEditingId] = useState(null);
@@ -59,11 +73,12 @@
             
             const [workout, setWorkout] = useState({ plan: [], idx: 0, seconds: 0 });
             const [isPlaying, setIsPlaying] = useState(false);
+            const [paused, setPaused] = useState(false);
             const playerRef = useRef(null);
 
             useEffect(() => {
-                localStorage.setItem('d20_v38_lib', JSON.stringify(lib));
-                localStorage.setItem('d20_v38_hist', JSON.stringify(hist));
+                localStorage.setItem('d20_v39_lib', JSON.stringify(lib));
+                localStorage.setItem('d20_v39_hist', JSON.stringify(hist));
             }, [lib, hist]);
 
             const toSecs = (str) => {
@@ -74,76 +89,52 @@
             const fromSecs = (s) => `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
 
             const getYTID = (u) => u?.match(/(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*embed\/))([^&?\s]{11})/)?.[1];
-            const getThumb = (v) => v.url.includes('instagram.com') ? 'https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg' : `https://img.youtube.com/vi/${getYTID(v.url)}/mqdefault.jpg`;
+            const isInsta = (u) => u?.includes('instagram.com');
+            const getThumb = (v) => isInsta(v.url) ? 'https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg' : `https://img.youtube.com/vi/${getYTID(v.url)}/mqdefault.jpg`;
 
-            const handleExport = () => {
-                const data = JSON.stringify({ lib, hist, goal });
-                const blob = new Blob([data], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `daily20_backup_${new Date().toISOString().split('T')[0]}.json`;
-                a.click();
-            };
+            const handleSkip = () => {
+                const finishedVid = workout.plan[workout.idx];
+                const today = new Date().toISOString().split('T')[0];
+                
+                setHist(prev => {
+                    const day = prev[today] || { totalMins: 0, videos: "" };
+                    return { ...prev, [today]: { 
+                        totalMins: day.totalMins + Math.ceil((finishedVid.durSec - finishedVid.startSec)/60),
+                        videos: day.videos + (day.videos ? ", " : "") + finishedVid.title
+                    }};
+                });
 
-            const handleImport = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (evt) => {
-                    try {
-                        const d = JSON.parse(evt.target.result);
-                        if (d.lib) setLib(d.lib);
-                        if (d.hist) setHist(d.hist);
-                        alert("Import Successful!");
-                    } catch (err) { alert("Error parsing file."); }
-                };
-                reader.readAsText(file);
-            };
-
-            const startWorkout = () => {
-                const pool = selectedId ? [lib.find(v => v.id === selectedId), ...lib.filter(v => v.id !== selectedId)] : [...lib].sort(() => 0.5 - Math.random());
-                const plan = pool.slice(0, 4);
-                if (plan.length === 0) return alert("Add videos first!");
-                setWorkout({ plan, idx: 0, seconds: plan[0].durSec - (plan[0].startSec || 0) });
-                setView('workout');
+                if (workout.idx + 1 < workout.plan.length) {
+                    const next = workout.idx + 1;
+                    setWorkout({ ...workout, idx: next, seconds: workout.plan[next].durSec - (workout.plan[next].startSec || 0) });
+                } else {
+                    setView('home'); alert("Workout Complete!");
+                }
             };
 
             useEffect(() => {
                 let t;
-                if (view === 'workout' && isPlaying && workout.seconds > 0) {
+                if (view === 'workout' && isPlaying && !paused && workout.seconds > 0) {
                     t = setInterval(() => setWorkout(w => ({ ...w, seconds: w.seconds - 1 })), 1000);
                 } else if (view === 'workout' && workout.seconds <= 0 && isPlaying) {
-                    const nextIdx = workout.idx + 1;
-                    const today = new Date().toISOString().split('T')[0];
-                    const finishedVid = workout.plan[workout.idx];
-                    
-                    setHist(prev => {
-                        const day = prev[today] || { totalMins: 0, videos: "" };
-                        return { ...prev, [today]: { 
-                            totalMins: day.totalMins + Math.ceil((finishedVid.durSec - finishedVid.startSec)/60),
-                            videos: day.videos + (day.videos ? ", " : "") + finishedVid.title
-                        }};
-                    });
-
-                    if (nextIdx < workout.plan.length) {
-                        setWorkout({ ...workout, idx: nextIdx, seconds: workout.plan[nextIdx].durSec - (workout.plan[nextIdx].startSec || 0) });
-                    } else {
-                        setView('home'); alert("Workout Complete!");
-                    }
+                    handleSkip();
                 }
                 return () => clearInterval(t);
-            }, [view, isPlaying, workout.seconds]);
+            }, [view, isPlaying, paused, workout.seconds]);
 
             useEffect(() => {
                 if (view === 'workout' && workout.plan[workout.idx]) {
                     const v = workout.plan[workout.idx];
-                    if (playerRef.current) playerRef.current.destroy();
-                    playerRef.current = new window.YT.Player('yt-player', {
-                        videoId: getYTID(v.url),
-                        playerVars: { autoplay: 1, start: v.startSec || 0, controls: 1 },
-                        events: { onStateChange: (e) => setIsPlaying(e.data === 1) }
-                    });
+                    if (!isInsta(v.url)) {
+                        if (playerRef.current) playerRef.current.destroy();
+                        playerRef.current = new window.YT.Player('yt-player', {
+                            videoId: getYTID(v.url),
+                            playerVars: { autoplay: 1, start: v.startSec || 0, controls: 1, rel: 0 },
+                            events: { onStateChange: (e) => setIsPlaying(e.data === 1) }
+                        });
+                    } else {
+                        setIsPlaying(true); // Insta can't trigger state, we assume playing
+                    }
                 }
             }, [view, workout.idx]);
 
@@ -164,7 +155,13 @@
                                         </div>
                                     ))}
                                 </div>
-                                <button onClick={startWorkout}>Start Training</button>
+                                <button onClick={() => {
+                                    const pool = selectedId ? [lib.find(v => v.id === selectedId), ...lib.filter(v => v.id !== selectedId)] : [...lib].sort(() => 0.5 - Math.random());
+                                    const plan = pool.slice(0, 4);
+                                    if (plan.length === 0) return alert("Add videos first!");
+                                    setWorkout({ plan, idx: 0, seconds: plan[0].durSec - (plan[0].startSec || 0) });
+                                    setView('workout');
+                                }}>Start Training</button>
                                 <button className="btn-sec" onClick={() => setView('lib')}>Library & Settings</button>
                             </div>
 
@@ -190,10 +187,18 @@
                         <main>
                             <div className="icon-btn-group">
                                 <div className="icon-btn" onClick={() => setView('home')}><Icons.Back /> Back</div>
-                                <div className="icon-btn" onClick={handleExport}><Icons.Export /> Export</div>
+                                <div className="icon-btn" onClick={() => {
+                                    const a = document.createElement('a');
+                                    a.href = URL.createObjectURL(new Blob([JSON.stringify({lib, hist, goal})], {type:'application/json'}));
+                                    a.download = 'daily20_v39.json'; a.click();
+                                }}><Icons.Export /> Export</div>
                                 <label className="icon-btn">
                                     <Icons.Import /> Import
-                                    <input type="file" style={{display:'none'}} accept=".json" onChange={handleImport} />
+                                    <input type="file" style={{display:'none'}} onChange={(e) => {
+                                        const r = new FileReader();
+                                        r.onload = (ev) => { const d = JSON.parse(ev.target.result); setLib(d.lib || []); setHist(d.hist || {}); };
+                                        r.readAsText(e.target.files[0]);
+                                    }} />
                                 </label>
                             </div>
 
@@ -205,8 +210,8 @@
                                 <label>Title</label><input name="t" required />
                                 <label>URL</label><input name="u" required />
                                 <div style={{display:'flex', gap:10}}>
-                                    <div style={{flex:1}}><label>Total End (mm:ss)</label><input name="d" placeholder="10:00" required /></div>
-                                    <div style={{flex:1}}><label>Start (mm:ss)</label><input name="s" placeholder="0:00" /></div>
+                                    <div style={{flex:1}}><label>End (mm:ss)</label><input name="d" required /></div>
+                                    <div style={{flex:1}}><label>Start (mm:ss)</label><input name="s" /></div>
                                 </div>
                                 <button type="submit">Add Video</button>
                             </form>
@@ -224,10 +229,10 @@
                                             <button style={{width:40, padding:5, background:'var(--danger)'}} onClick={() => setLib(lib.filter(x => x.id !== v.id))}>✕</button>
                                         </div>
                                         {editingId === v.id && (
-                                            <div className="edit-box">
+                                            <div className="edit-box" style={{background:'#111', padding:10, borderRadius:8}}>
                                                 <label>Title</label><input defaultValue={v.title} id={`et-${v.id}`} />
-                                                <label>Total Duration (Ends at)</label><input defaultValue={fromSecs(v.durSec)} id={`ed-${v.id}`} />
-                                                <label>Start Timestamp</label><input defaultValue={fromSecs(v.startSec)} id={`es-${v.id}`} />
+                                                <label>End (mm:ss)</label><input defaultValue={fromSecs(v.durSec)} id={`ed-${v.id}`} />
+                                                <label>Start (mm:ss)</label><input defaultValue={fromSecs(v.startSec)} id={`es-${v.id}`} />
                                                 <button onClick={() => {
                                                     setLib(lib.map(x => x.id === v.id ? { ...x, title: document.getElementById(`et-${v.id}`).value, durSec: toSecs(document.getElementById(`ed-${v.id}`).value), startSec: toSecs(document.getElementById(`es-${v.id}`).value) } : x));
                                                     setEditingId(null);
@@ -240,13 +245,24 @@
                         </main>
                     )}
 
-                    {view === 'workout' && (
+                    {view === 'workout' && workout.plan[workout.idx] && (
                         <main style={{textAlign:'center'}}>
-                            <div className="player-wrapper"><div id="yt-player"></div></div>
+                            <div className={`player-frame ${isInsta(workout.plan[workout.idx].url) ? 'ratio-insta' : 'ratio-16-9'}`}>
+                                {isInsta(workout.plan[workout.idx].url) ? 
+                                    <iframe src={`${workout.plan[workout.idx].url.split('?')[0]}embed`} allowTransparency="true" frameBorder="0" scrolling="no" allowFullScreen></iframe> : 
+                                    <div id="yt-player"></div>
+                                }
+                            </div>
                             <div className="card">
-                                <div style={{fontSize:50, fontWeight:900}}>{fromSecs(workout.seconds)}</div>
-                                <h3>{workout.plan[workout.idx]?.title}</h3>
-                                <button className="btn-sec" onClick={() => setView('home')}>Exit Workout</button>
+                                <div style={{fontSize:54, fontWeight:900}}>{fromSecs(workout.seconds)}</div>
+                                <h3>{workout.plan[workout.idx].title}</h3>
+                                <button onClick={() => setPaused(!paused)} style={{background: paused ? 'var(--success)' : 'var(--warning)', marginBottom:10}}>
+                                    {paused ? 'Resume' : 'Pause'}
+                                </button>
+                                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:10}}>
+                                    <button className="btn-sec" onClick={handleSkip}>Skip</button>
+                                    <button className="btn-sec" onClick={() => setView('home')}>Exit</button>
+                                </div>
                             </div>
                         </main>
                     )}
