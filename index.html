@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Daily20 Pro | v20</title>
+    <title>Daily20 Pro | v21</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -17,22 +17,30 @@
         button { background: var(--neon); color: black; border: none; padding: 12px; border-radius: 10px; font-weight: 800; width: 100%; cursor: pointer; text-transform: uppercase; }
         .btn-sec { background: #333; color: white; margin-top: 8px; }
         
+        /* Player */
         .player-wrapper { width: 100%; border-radius: 16px; overflow: hidden; background: #000; border: 1px solid #333; margin-bottom: 8px; position: relative; }
         .ratio-yt { aspect-ratio: 16/9; }
         .ratio-insta { aspect-ratio: 9/16; max-height: 55vh; }
         #yt-player, .insta-player { width: 100%; height: 100%; border: 0; display: block; }
 
-        .lib-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #2a2a2a; }
-        .icon-btn-group { display: flex; gap: 10px; margin-top: 15px; }
-        .icon-btn { background: #2a2a2a; border: 1px solid #444; color: white; padding: 10px; border-radius: 10px; flex: 1; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; }
-        .icon-btn svg { width: 16px; height: 16px; margin-right: 8px; stroke: var(--neon); fill: none; stroke-width: 2; }
-        
+        /* Calendar */
         .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
         .cal-cell { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 11px; border-radius: 6px; background: #2a2a2a; color: #555; }
         .active-month { color: var(--text); }
         .complete { background: var(--neon); color: black; font-weight: bold; }
         .today { border: 1px solid var(--neon); }
+        
+        /* History List */
+        .hist-item { padding: 10px; border-left: 3px solid var(--neon); background: #252525; border-radius: 4px; margin-top: 8px; font-size: 12px; }
+        .hist-date { color: var(--neon); font-weight: bold; margin-bottom: 4px; }
+        .hist-vids { color: var(--dim); font-style: italic; }
+
+        /* Icons & UI */
+        .lib-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #2a2a2a; }
+        .icon-btn-group { display: flex; gap: 10px; margin-top: 15px; }
+        .icon-btn { background: #2a2a2a; border: 1px solid #444; color: white; padding: 10px; border-radius: 10px; flex: 1; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; }
+        .icon-btn svg { width: 16px; height: 16px; margin-right: 8px; stroke: var(--neon); fill: none; stroke-width: 2; }
         
         .carousel { display: flex; overflow-x: auto; gap: 8px; padding: 5px; margin-bottom: 10px; }
         .carousel-item { flex: 0 0 80px; text-align: center; }
@@ -48,8 +56,8 @@
 
         const App = () => {
             const [view, setView] = useState('home');
-            const [lib, setLib] = useState(() => JSON.parse(localStorage.getItem('d20_v20') || '[]'));
-            const [hist, setHist] = useState(() => JSON.parse(localStorage.getItem('d20_hist_v20') || '{}'));
+            const [lib, setLib] = useState(() => JSON.parse(localStorage.getItem('d20_v21_lib') || '[]'));
+            const [hist, setHist] = useState(() => JSON.parse(localStorage.getItem('d20_v21_hist') || '{}'));
             const [selectedId, setSelectedId] = useState(null);
             const [editingVid, setEditingVid] = useState(null);
             const [calDate, setCalDate] = useState(new Date());
@@ -59,8 +67,8 @@
             const playerRef = useRef(null);
 
             useEffect(() => {
-                localStorage.setItem('d20_v20', JSON.stringify(lib));
-                localStorage.setItem('d20_hist_v20', JSON.stringify(hist));
+                localStorage.setItem('d20_v21_lib', JSON.stringify(lib));
+                localStorage.setItem('d20_v21_hist', JSON.stringify(hist));
             }, [lib, hist]);
 
             const getYTID = (u) => u?.match(/(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*embed\/))([^&?\s]{11})/)?.[1];
@@ -103,7 +111,9 @@
             };
 
             const finish = () => {
-                setHist({...hist, [new Date().toISOString().split('T')[0]]: true });
+                const today = new Date().toISOString().split('T')[0];
+                const titles = workout.plan.map(v => v.title).join(", ");
+                setHist({...hist, [today]: { complete: true, videos: titles }});
                 setView('home'); setSelectedId(null);
             };
 
@@ -119,7 +129,7 @@
 
             return (
                 <div className="container">
-                    <h1 style={{color:'var(--neon)', textAlign:'center', margin:'10px 0', fontSize:'24px'}} onClick={() => {setView('home'); setIsPlaying(false);}}>DAILY20</h1>
+                    <h1 style={{color:'var(--neon)', textAlign:'center', margin:'10px 0'}} onClick={() => {setView('home'); setIsPlaying(false);}}>DAILY20</h1>
 
                     {view === 'home' && (
                         <div>
@@ -150,11 +160,19 @@
                                 <div className="cal-grid">
                                     {['S','M','T','W','T','F','S'].map(d => <div key={d} style={{textAlign:'center', fontSize:'9px', color:'var(--dim)'}}>{d}</div>)}
                                     {daysArr.map((d, i) => (
-                                        <div key={i} className={`cal-cell ${d.current ? 'active-month' : ''} ${hist[d.ds] ? 'complete' : ''} ${d.ds === new Date().toISOString().split('T')[0] ? 'today' : ''}`}>
+                                        <div key={i} className={`cal-cell ${d.current ? 'active-month' : ''} ${hist[d.ds]?.complete ? 'complete' : ''} ${d.ds === new Date().toISOString().split('T')[0] ? 'today' : ''}`}>
                                             {d.day}
                                         </div>
                                     ))}
                                 </div>
+                                
+                                <h4 style={{marginTop:'20px', marginBottom:'10px', fontSize:'14px', borderBottom:'1px solid #333', paddingBottom:'5px'}}>Session Log</h4>
+                                {Object.keys(hist).sort().reverse().slice(0,5).map(date => (
+                                    <div key={date} className="hist-item">
+                                        <div className="hist-date">{date}</div>
+                                        <div className="hist-vids">{hist[date].videos}</div>
+                                    </div>
+                                ))}
                             </div>
                         </div>
                     )}
@@ -188,9 +206,9 @@
                                 ))}
                                 <div className="icon-btn-group">
                                     <div className="icon-btn" onClick={() => {
-                                        const blob = new Blob([JSON.stringify(lib)], {type:'application/json'});
+                                        const blob = new Blob([JSON.stringify({lib, hist})], {type:'application/json'});
                                         const url = URL.createObjectURL(blob);
-                                        const a = document.createElement('a'); a.href = url; a.download = 'daily20_backup.json'; a.click();
+                                        const a = document.createElement('a'); a.href = url; a.download = 'daily20_v21_backup.json'; a.click();
                                     }}>
                                         <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4m12-7-5-5-5 5m5-5v12"/></svg>
                                         Export
@@ -199,7 +217,11 @@
                                         <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5m-5 5V3"/></svg>
                                         Import
                                         <input type="file" style={{display:'none'}} onChange={e => {
-                                            const r = new FileReader(); r.onload = (ev) => setLib(JSON.parse(ev.target.result)); r.readAsText(e.target.files[0]);
+                                            const r = new FileReader(); r.onload = (ev) => {
+                                                const data = JSON.parse(ev.target.result);
+                                                if(data.lib) setLib(data.lib);
+                                                if(data.hist) setHist(data.hist);
+                                            }; r.readAsText(e.target.files[0]);
                                         }} />
                                     </label>
                                 </div>
