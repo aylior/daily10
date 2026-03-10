@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Daily20 Pro | v71</title>
+    <title>Daily20 Pro | v72</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com-react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         :root { --bg: #0a0a0a; --card: #161616; --neon: #ff9900; --text: #ffffff; --dim: #888888; --danger: #ff4d4d; }
@@ -21,14 +21,14 @@
         .btn-sec { background: #2a2a2a; color: white; }
         .btn-neon-ghost { background: transparent; color: var(--neon); border: 1.5px solid var(--neon); }
         .btn-icon { width: 40px; height: 40px; flex: none; padding: 0; }
-        svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+        svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
 
         input, select, textarea { background: #222; border: 1px solid #333; color: white; padding: 12px; border-radius: 10px; font-size: 14px; width: 100%; box-sizing: border-box; margin-bottom: 10px; font-family: inherit; }
         label { font-size: 10px; font-weight: 800; color: var(--neon); text-transform: uppercase; margin-bottom: 4px; display: block; }
 
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 8px; }
         .cal-day { aspect-ratio: 1; border-radius: 8px; background: #1f1f1f; font-size: 9px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; border: 1.5px solid transparent; }
-        .cal-day.today { border-color: var(--neon); background: #222; }
+        .cal-day.today { border: 2px solid var(--neon); background: #222; }
         .cal-day.has-data { color: var(--neon); }
         .cal-m { font-weight: 900; font-size: 10px; }
         .streak-box { text-align: center; color: var(--neon); font-weight: 800; font-size: 14px; margin-top: 15px; padding-top: 10px; border-top: 1px solid #222; }
@@ -58,7 +58,10 @@
             Back: () => <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>,
             Edit: () => <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
             Trash: () => <svg viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
-            X: () => <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Export: () => <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>,
+            Import: () => <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>,
+            X: () => <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+            Search: () => <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         };
 
         const getLocalDateKey = (d = new Date()) => {
@@ -66,7 +69,11 @@
             return new Date(d.getTime() - offset).toISOString().split('T')[0];
         };
 
-        const formatTime = (secs) => `${Math.floor(secs / 60)}:${Math.floor(secs % 60).toString().padStart(2, '0')}`;
+        const formatTime = (secs) => {
+            const s = Math.max(0, secs);
+            return `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
+        };
+
         const parseTime = (str) => {
             if (!str) return 0;
             const p = str.split(':');
@@ -89,9 +96,10 @@
             const [goal, setGoal] = useState(() => parseInt(localStorage.getItem('d20_goal')) || 20);
             
             const [selectedId, setSelectedId] = useState(null);
+            const [searchQuery, setSearchQuery] = useState('');
             const [inspecting, setInspecting] = useState(null);
             const [manualLog, setManualLog] = useState(false);
-            const [editItem, setEditItem] = useState(null);
+            const [editVideo, setEditVideo] = useState(null);
 
             const [workout, setWorkout] = useState({ plan: [], idx: 0, secondsLeft: 0, isActive: false });
             const [playerPaused, setPlayerPaused] = useState(true);
@@ -120,7 +128,7 @@
                 return count;
             }, [hist, goal, todayKey]);
 
-            // Timer Logic
+            // Timer logic for live training
             useEffect(() => {
                 let ticker;
                 if (workout.isActive && !playerPaused) {
@@ -129,7 +137,7 @@
                         setHist(prev => {
                             const day = prev[todayKey] || { items: [] };
                             const label = workout.plan[workout.idx]?.title || "Training";
-                            let items = Array.isArray(day.items) ? [...day.items] : [];
+                            let items = [...(day.items || [])];
                             let match = items.find(i => i.label === label);
                             if (match) match.mins = (parseFloat(match.mins) || 0) + (1/60);
                             else items.push({ label, mins: 1/60 });
@@ -140,7 +148,7 @@
                 return () => clearInterval(ticker);
             }, [workout.isActive, playerPaused, workout.idx]);
 
-            // YouTube API
+            // YT Sync
             useEffect(() => {
                 if (view === 'workout' && !window.YT) {
                     const tag = document.createElement('script');
@@ -162,48 +170,25 @@
                 } else { setPlayerPaused(false); }
             };
 
-            const handleManualSave = () => {
-                const l = document.getElementById('mL')?.value || "Manual Activity";
-                const m = parseFloat(document.getElementById('mM')?.value) || 0;
-                const d = document.getElementById('mD')?.value || todayKey;
-                if (m <= 0) return setManualLog(false);
-
-                setHist(prev => {
-                    const day = prev[d] || { items: [] };
-                    return { ...prev, [d]: { items: [...(day.items || []), { label: l, mins: m }] } };
-                });
-                setManualLog(false);
-            };
-
-            const deleteHistoryItem = (dateKey, index) => {
-                if(!confirm('Delete this entry?')) return;
-                setHist(prev => {
-                    const day = prev[dateKey];
-                    const newItems = day.items.filter((_, i) => i !== index);
-                    const newHist = { ...prev, [dateKey]: { items: newItems } };
-                    setInspecting({ ...inspecting, items: newItems });
-                    return newHist;
-                });
-            };
-
-            const editHistoryItem = (dateKey, index) => {
-                const item = hist[dateKey].items[index];
-                const newLabel = prompt('Edit Title:', item.label);
-                const newMins = prompt('Edit Minutes:', Math.round(item.mins));
-                if (newLabel === null || newMins === null) return;
-
-                setHist(prev => {
-                    const day = prev[dateKey];
-                    const newItems = day.items.map((it, i) => i === index ? { label: newLabel, mins: parseFloat(newMins) } : it);
-                    const newHist = { ...prev, [dateKey]: { items: newItems } };
-                    setInspecting({ ...inspecting, items: newItems });
-                    return newHist;
-                });
+            const handleVideoSave = (e) => {
+                e.preventDefault();
+                const f = new FormData(e.target);
+                const data = {
+                    id: editVideo ? editVideo.id : Date.now(),
+                    title: f.get('t'),
+                    url: f.get('u'),
+                    durSec: parseTime(f.get('d')),
+                    startSec: parseTime(f.get('s'))
+                };
+                if (editVideo) setLib(lib.map(v => v.id === editVideo.id ? data : v));
+                else setLib([data, ...lib]);
+                setEditVideo(null);
+                e.target.reset();
             };
 
             return (
                 <div className="container">
-                    <header><h1 className="app-title">DAILY20</h1><span className="v-tag">VERSION 71.0</span></header>
+                    <header><h1 className="app-title">DAILY20</h1><span className="v-tag">VERSION 72.0</span></header>
 
                     {view === 'home' && (
                         <>
@@ -216,7 +201,7 @@
                                     {lib.map(v => (
                                         <div key={v.id} className={`thumb-wrap ${selectedId === v.id ? 'selected' : ''}`} onClick={() => setSelectedId(v.id === selectedId ? null : v.id)}>
                                             <img src={getMeta(v.url).thumb} style={{width:'100%', height:'100%', objectFit:'cover'}} />
-                                            <div className="dur-badge">{formatTime(v.durSec)}</div>
+                                            <div className="dur-badge">{formatTime(v.durSec - (v.startSec || 0))}</div>
                                         </div>
                                     ))}
                                 </div>
@@ -224,7 +209,7 @@
                                     if(!lib.length) return;
                                     let p = [...lib].sort(() => 0.5 - Math.random());
                                     if(selectedId) p = [lib.find(x => x.id === selectedId), ...p.filter(x => x.id !== selectedId)];
-                                    setWorkout({ plan: p.slice(0,3), idx: 0, secondsLeft: p[0].durSec, isActive: true });
+                                    setWorkout({ plan: p.slice(0,3), idx: 0, secondsLeft: (p[0].durSec - (p[0].startSec || 0)), isActive: true });
                                     setView('workout');
                                 }}>Start Workout</button>
                                 <div className="btn-row" style={{marginTop:8}}>
@@ -255,24 +240,38 @@
 
                     {view === 'lib' && (
                         <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
-                            <div className="btn-row"><button className="btn-neon-ghost btn-icon" onClick={() => setView('home')}><Icons.Back /></button><button className="btn-neon-ghost">Export</button><button className="btn-neon-ghost">Import</button></div>
-                            <form className="card" onSubmit={(e) => {
-                                e.preventDefault(); const f = new FormData(e.target);
-                                setLib([{ id: Date.now(), title: f.get('t'), url: f.get('u'), durSec: parseTime(f.get('d')), startSec: parseTime(f.get('s')) }, ...lib]);
-                                e.target.reset();
-                            }}>
-                                <label>Title</label><input name="t" required />
-                                <label>URL</label><input name="u" required />
-                                <div style={{display:'flex', gap:8}}><div style={{flex:1}}><label>Duration</label><input name="d" placeholder="00:00" required /></div><div style={{flex:1}}><label>Start</label><input name="s" placeholder="00:00" /></div></div>
-                                <button type="submit">Add Video</button>
+                            <div className="btn-row">
+                                <button className="btn-neon-ghost btn-icon" onClick={() => setView('home')}><Icons.Back /></button>
+                                <button className="btn-neon-ghost"><Icons.Export /> Export</button>
+                                <button className="btn-neon-ghost"><Icons.Import /> Import</button>
+                            </div>
+                            <form className="card" onSubmit={handleVideoSave}>
+                                <label>{editVideo ? 'Edit Video' : 'Add New Video'}</label>
+                                <input name="t" placeholder="Title" defaultValue={editVideo?.title} required />
+                                <input name="u" placeholder="URL" defaultValue={editVideo?.url} required />
+                                <div style={{display:'flex', gap:8}}>
+                                    <div style={{flex:1}}><label>Total Dur</label><input name="d" placeholder="00:00" defaultValue={editVideo ? formatTime(editVideo.durSec) : ''} required /></div>
+                                    <div style={{flex:1}}><label>Start At</label><input name="s" placeholder="00:00" defaultValue={editVideo ? formatTime(editVideo.startSec) : ''} /></div>
+                                </div>
+                                <div className="btn-row">
+                                    <button type="submit">{editVideo ? 'Update' : 'Add'}</button>
+                                    {editVideo && <button type="button" className="btn-sec" onClick={() => setEditVideo(null)}>Cancel</button>}
+                                </div>
                             </form>
                             <div className="card" style={{flex:1, overflowY:'auto'}}>
-                                {lib.map(v => (
-                                    <div key={v.id} style={{display:'flex', alignItems:'center', gap:10, padding:'8px 0', borderBottom:'1px solid #222'}}>
-                                        <div style={{position:'relative'}}><img src={getMeta(v.url).thumb} style={{width:60, height:34, borderRadius:4, objectFit:'cover'}} /><div className="dur-badge" style={{fontSize:7}}>{formatTime(v.durSec)}</div></div>
-                                        <div style={{flex:1, fontSize:13, fontWeight:700, overflow:'hidden', textOverflow:'ellipsis'}}>{v.title}</div>
-                                        <button className="btn-sec btn-icon" style={{width:30, height:30}} onClick={() => setEditItem(v)}><Icons.Edit /></button>
-                                        <button className="btn-sec btn-icon" style={{width:30, height:30, color:'var(--danger)'}} onClick={() => setLib(lib.filter(x => x.id !== v.id))}><Icons.Trash /></button>
+                                <div style={{position:'relative', marginBottom:12}}>
+                                    <input placeholder="Search library..." style={{paddingLeft:40}} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                                    <div style={{position:'absolute', left:12, top:10, color:'var(--dim)'}}><Icons.Search /></div>
+                                </div>
+                                {lib.filter(v => v.title.toLowerCase().includes(searchQuery.toLowerCase())).map(v => (
+                                    <div key={v.id} style={{display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:'1px solid #222'}}>
+                                        <div style={{position:'relative'}}>
+                                            <img src={getMeta(v.url).thumb} style={{width:70, height:40, borderRadius:6, objectFit:'cover'}} />
+                                            <div className="dur-badge" style={{fontSize:8}}>{formatTime(v.durSec - (v.startSec || 0))}</div>
+                                        </div>
+                                        <div style={{flex:1, fontSize:13, fontWeight:700}}>{v.title}</div>
+                                        <button className="btn-sec btn-icon" style={{width:32, height:32}} onClick={() => setEditVideo(v)}><Icons.Edit /></button>
+                                        <button className="btn-sec btn-icon" style={{width:32, height:32, color:'var(--danger)'}} onClick={() => setLib(lib.filter(x => x.id !== v.id))}><Icons.Trash /></button>
                                     </div>
                                 ))}
                             </div>
@@ -287,7 +286,7 @@
                                 <div style={{color: playerPaused ? 'var(--danger)' : 'var(--neon)', fontSize:10, marginBottom:10}}>{playerPaused ? 'PAUSED' : 'TRACKING...'}</div>
                                 <h3 style={{margin:0}}>{workout.plan[workout.idx]?.title}</h3>
                                 <div className="btn-row" style={{marginTop:15}}>
-                                    <button className="btn-sec" onClick={() => { if (workout.idx + 1 < workout.plan.length) { const n = workout.idx + 1; setWorkout({...workout, idx: n, secondsLeft: workout.plan[n].durSec}); } else { setView('home'); setWorkout({...workout, isActive: false}); } }}>Skip</button>
+                                    <button className="btn-sec" onClick={() => { if (workout.idx + 1 < workout.plan.length) { const n = workout.idx + 1; setWorkout({...workout, idx: n, secondsLeft: (workout.plan[n].durSec - (workout.plan[n].startSec || 0))}); } else { setView('home'); setWorkout({...workout, isActive: false}); } }}>Skip</button>
                                     <button onClick={() => {setView('home'); setWorkout({...workout, isActive: false});}}>End</button>
                                 </div>
                             </div>
@@ -297,11 +296,20 @@
                     {manualLog && (
                         <div className="overlay" onClick={() => setManualLog(false)}>
                             <div className="card" style={{width:'90%'}} onClick={e => e.stopPropagation()}>
-                                <h3>Manual Activity Log</h3>
+                                <h3>Manual Activity</h3>
                                 <label>Date</label><input type="date" id="mD" defaultValue={todayKey} />
-                                <label>Activity Name</label><input id="mL" placeholder="Gym, Running, etc." />
+                                <label>Name</label><input id="mL" placeholder="Gym, Running, etc." />
                                 <label>Minutes</label><input id="mM" type="number" />
-                                <button onClick={handleManualSave}>Save Activity</button>
+                                <button onClick={() => {
+                                    const l = document.getElementById('mL').value || "Manual";
+                                    const m = parseFloat(document.getElementById('mM').value) || 0;
+                                    const d = document.getElementById('mD').value;
+                                    setHist(prev => {
+                                        const day = prev[d] || { items: [] };
+                                        return { ...prev, [d]: { items: [...(day.items || []), { label: l, mins: m }] } };
+                                    });
+                                    setManualLog(false);
+                                }}>Save</button>
                             </div>
                         </div>
                     )}
@@ -309,23 +317,18 @@
                     {inspecting && (
                         <div className="overlay" onClick={() => setInspecting(null)}>
                             <div className="card" style={{width:'90%'}} onClick={e => e.stopPropagation()}>
-                                <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:15}}>
-                                    <h3 style={{margin:0}}>{inspecting.date}</h3>
-                                    <div onClick={() => setInspecting(null)} style={{color:'var(--dim)'}}><Icons.X /></div>
-                                </div>
-                                <div style={{maxHeight:'300px', overflowY:'auto'}}>
-                                    {Array.isArray(inspecting.items) && inspecting.items.length > 0 ? inspecting.items.map((it, i) => (
-                                        <div key={i} style={{display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:'1px solid #333'}}>
-                                            <div style={{flex:1}}>
-                                                <div style={{fontSize:13, fontWeight:700}}>{it.label}</div>
-                                                <div style={{fontSize:11, color:'var(--neon)'}}>{Math.round(it.mins)} Minutes</div>
-                                            </div>
-                                            <button className="btn-sec btn-icon" style={{width:32, height:32}} onClick={() => editHistoryItem(inspecting.key, i)}><Icons.Edit /></button>
-                                            <button className="btn-sec btn-icon" style={{width:32, height:32, color:'var(--danger)'}} onClick={() => deleteHistoryItem(inspecting.key, i)}><Icons.Trash /></button>
-                                        </div>
-                                    )) : <p style={{textAlign:'center', color:'var(--dim)', padding:'20px 0'}}>No activity recorded.</p>}
-                                </div>
-                                <button style={{marginTop:15, width:'100%'}} onClick={() => setInspecting(null)}>Close</button>
+                                <div style={{display:'flex', justifyContent:'space-between', marginBottom:15}}><h3>{inspecting.date}</h3><div onClick={() => setInspecting(null)}><Icons.X /></div></div>
+                                {inspecting.items.map((it, i) => (
+                                    <div key={i} style={{display:'flex', alignItems:'center', padding:'10px 0', borderBottom:'1px solid #333'}}>
+                                        <div style={{flex:1}}><div style={{fontSize:13, fontWeight:700}}>{it.label}</div><div style={{fontSize:11, color:'var(--neon)'}}>{Math.round(it.mins)}m</div></div>
+                                        <button className="btn-sec btn-icon" style={{width:32, height:32, color:'var(--danger)'}} onClick={() => {
+                                            const newItems = inspecting.items.filter((_, idx) => idx !== i);
+                                            setHist({...hist, [inspecting.key]: { items: newItems }});
+                                            setInspecting({...inspecting, items: newItems});
+                                        }}><Icons.Trash /></button>
+                                    </div>
+                                ))}
+                                <button style={{marginTop:15}} onClick={() => setInspecting(null)}>Close</button>
                             </div>
                         </div>
                     )}
