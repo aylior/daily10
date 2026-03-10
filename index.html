@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'><rect width='256' height='256' fill='%230A0A0A'/><path d='M 50 40 L 220 128 L 50 216 Z' fill='%23FF9900' stroke='%23FF9900' stroke-width='15' stroke-linejoin='round'/><text x='70' y='145' font-family='sans-serif' font-weight='900' font-size='55' fill='%230A0A0A'>UT</text></svg>">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'><rect width='256' height='256' fill='%230A0A0A'/><path d='M 40 30 L 230 128 L 40 226 Z' fill='%23FF9900' stroke='%23FF9900' stroke-width='15' stroke-linejoin='round'/><text x='50%25' y='58%25' dominant-baseline='middle' text-anchor='middle' font-family='sans-serif' font-weight='900' font-size='100' fill='%230A0A0A'>UT</text></svg>">
     <title>UTrainTube</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -53,10 +53,11 @@
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
 
+        // New App Icon: Larger Borderless UT Monogram (using negative space) within orange triangle
         const AppIcon = () => (
             <svg className="app-icon-svg" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M 50 40 L 220 128 L 50 216 Z" fill="#FF9900" stroke="#FF9900" stroke-width="15" stroke-linejoin="round"/>
-                <text x="70" y="145" font-family="system-ui, sans-serif" font-weight="900" font-size="55" fill="#0a0a0a">UT</text>
+                <path d="M 40 30 L 230 128 L 40 226 Z" fill="#FF9900" stroke="#FF9900" stroke-width="15" stroke-linejoin="round"/>
+                <text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="900" font-size="100" fill="#0a0a0a">UT</text>
             </svg>
         );
 
