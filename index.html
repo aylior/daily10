@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Daily20 Pro | v73</title>
+    <title>Daily20 Pro | v74</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        :root { --bg: #0a0a0a; --card: #161616; --neon: #ff9900; --text: #ffffff; --dim: #888888; --danger: #ff4d4d; }
+        :root { --bg: #0a0a0a; --card: #161616; --neon: #ff9900; --text: #ffffff; --dim: #888888; --danger: #ff4d4d; --safe: #2ecc71; }
         body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding: 10px; overflow-x: hidden; height: 100vh; }
         .container { max-width: 480px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; }
         .card { background: var(--card); padding: 16px; border-radius: 20px; margin-bottom: 12px; border: 1px solid #282828; }
@@ -33,10 +33,10 @@
         .cal-m { font-weight: 900; font-size: 10px; }
         .streak-box { text-align: center; color: var(--neon); font-weight: 800; font-size: 14px; margin-top: 15px; padding-top: 10px; border-top: 1px solid #222; }
 
-        .carousel { display: flex; overflow-x: auto; gap: 10px; padding: 5px 0 15px 0; scrollbar-width: none; }
+        .carousel { display: flex; overflow-x: auto; gap: 12px; padding: 10px 0 20px 0; scrollbar-width: none; }
         .carousel::-webkit-scrollbar { display: none; }
-        .thumb-wrap { position: relative; width: 110px; height: 62px; border-radius: 10px; overflow: hidden; border: 2.5px solid transparent; background: #000; flex-shrink: 0; }
-        .selected .thumb-wrap { border-color: var(--neon); box-shadow: 0 0 10px var(--neon); }
+        .thumb-wrap { position: relative; width: 120px; height: 68px; border-radius: 12px; overflow: hidden; border: 2px solid transparent; background: #000; flex-shrink: 0; transition: all 0.2s; }
+        .thumb-wrap.selected { border-color: var(--neon); box-shadow: 0 0 15px rgba(255, 153, 0, 0.4); transform: scale(1.05); }
         .dur-badge { position: absolute; bottom: 3px; right: 3px; font-size: 9px; font-weight: 800; background: rgba(0,0,0,0.8); padding: 2px 4px; border-radius: 4px; color: var(--neon); }
 
         .workout-ui { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; }
@@ -61,7 +61,9 @@
             Export: () => <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>,
             Import: () => <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>,
             X: () => <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
-            Search: () => <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Search: () => <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+            Pause: () => <svg viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>,
+            Play: () => <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"/></svg>
         };
 
         const getLocalDateKey = (d = new Date()) => {
@@ -85,8 +87,12 @@
             if (!url) return { type: 'none', id: null, thumb: '' };
             const yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*embed\/))([^&?\s]{11})/);
             if (yt) return { type: 'yt', id: yt[1], thumb: `https://img.youtube.com/vi/${yt[1]}/mqdefault.jpg` };
+            
             const ig = url.match(/(?:instagram\.com\/(?:p|reels|reel)\/)([^/?#&]+)/);
-            if (ig) return { type: 'ig', id: ig[1], thumb: `https://images.weserv.nl/?url=www.instagram.com/reels/${ig[1]}/?size=m` };
+            if (ig) {
+                // Using a more robust combined proxy for IG images
+                return { type: 'ig', id: ig[1], thumb: `https://images.weserv.nl/?url=https://www.instagram.com/p/${ig[1]}/media/?size=m&w=200` };
+            }
             return { type: 'web', id: null, thumb: 'https://placehold.co/100x60/222/ff9900?text=VIDEO' };
         };
 
@@ -129,6 +135,7 @@
                 return count;
             }, [hist, goal, todayKey]);
 
+            // Timer logic for live training
             useEffect(() => {
                 let ticker;
                 if (workout.isActive && !playerPaused) {
@@ -148,6 +155,7 @@
                 return () => clearInterval(ticker);
             }, [workout.isActive, playerPaused, workout.idx]);
 
+            // YT Sync
             useEffect(() => {
                 if (view === 'workout' && !window.YT) {
                     const tag = document.createElement('script');
@@ -188,7 +196,7 @@
 
             return (
                 <div className="container">
-                    <header><h1 className="app-title">DAILY20</h1><span className="v-tag">VERSION 73.0 (STABLE)</span></header>
+                    <header><h1 className="app-title">DAILY20</h1><span className="v-tag">VERSION 74.0</span></header>
 
                     {view === 'home' && (
                         <>
@@ -199,7 +207,9 @@
                                 </select>
                                 <div className="carousel">
                                     {lib.map(v => (
-                                        <div key={v.id} className={`thumb-wrap ${selectedId === v.id ? 'selected' : ''}`} onClick={() => setSelectedId(v.id === selectedId ? null : v.id)}>
+                                        <div key={v.id} 
+                                             className={`thumb-wrap ${selectedId === v.id ? 'selected' : ''}`} 
+                                             onClick={() => setSelectedId(v.id === selectedId ? null : v.id)}>
                                             <img src={getMeta(v.url).thumb} style={{width:'100%', height:'100%', objectFit:'cover'}} />
                                             <div className="dur-badge">{formatTime(v.durSec - (v.startSec || 0))}</div>
                                         </div>
@@ -287,7 +297,18 @@
                             </div>
                             <div className="workout-footer">
                                 <div className="timer-display">{formatTime(workout.secondsLeft)}</div>
-                                <div style={{color: playerPaused ? 'var(--danger)' : 'var(--neon)', fontSize:10, marginBottom:10}}>{playerPaused ? 'PAUSED' : 'TRACKING...'}</div>
+                                
+                                <div className="btn-row" style={{justifyContent:'center', marginBottom:10}}>
+                                    <button 
+                                        onClick={() => setPlayerPaused(!playerPaused)} 
+                                        className={playerPaused ? "btn-sec" : ""}
+                                        style={{flex:'none', width:140, background: playerPaused ? 'var(--safe)' : '#2a2a2a', color: playerPaused ? '#000' : '#fff'}}
+                                    >
+                                        {playerPaused ? <Icons.Play /> : <Icons.Pause />}
+                                        {playerPaused ? 'RESUME' : 'PAUSE'}
+                                    </button>
+                                </div>
+
                                 <h3 style={{margin:0}}>{workout.plan[workout.idx]?.title}</h3>
                                 <div className="btn-row" style={{marginTop:15}}>
                                     <button className="btn-sec" onClick={() => { if (workout.idx + 1 < workout.plan.length) { const n = workout.idx + 1; setWorkout({...workout, idx: n, secondsLeft: (workout.plan[n].durSec - (workout.plan[n].startSec || 0))}); } else { setView('home'); setWorkout({...workout, isActive: false}); } }}>Skip</button>
