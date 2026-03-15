@@ -9,7 +9,7 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        :root { --bg: #0a0a0a; --card: #161616; --neon: #ff9900; --text: #ffffff; --dim: #888888; --danger: #ff4d4d; --safe: #2ecc71; }
+        :root { --bg: #0a0a0a; --card: #161616; --neon: #ff9900; --text: #ffffff; --dim: #888888; --danger: #ff4d4d; --safe: #2ecc71; --ig: #E1306C; }
         body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding: 10px; overflow-x: hidden; height: 100vh; }
         .container { max-width: 480px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; position: relative; }
         
@@ -30,17 +30,20 @@
         
         input, select, textarea { background: #222; border: 1px solid #333; color: white; padding: 12px; border-radius: 10px; font-size: 14px; width: 100%; box-sizing: border-box; margin-bottom: 10px; font-family: inherit; }
         label { font-size: 10px; font-weight: 800; color: var(--neon); text-transform: uppercase; margin-bottom: 4px; display: block; }
+        
         .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; margin-top: 8px; }
         .cal-day { aspect-ratio: 1; border-radius: 8px; background: #1f1f1f; font-size: 9px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; border: 1.5px solid transparent; }
         .cal-day.today { border: 2px solid var(--neon); background: #222; }
         .cal-day.has-data { color: var(--neon); }
         .cal-m { font-weight: 900; font-size: 10px; }
         .streak-box { text-align: center; color: var(--neon); font-weight: 800; font-size: 14px; margin-top: 15px; padding-top: 10px; border-top: 1px solid #222; }
+        
         .carousel { display: flex; overflow-x: auto; gap: 12px; padding: 10px 0 20px 0; scrollbar-width: none; }
         .carousel::-webkit-scrollbar { display: none; }
         .thumb-wrap { position: relative; width: 120px; height: 68px; border-radius: 12px; overflow: hidden; border: 2px solid transparent; background: #000; flex-shrink: 0; transition: all 0.2s; cursor: pointer; }
         .thumb-wrap.selected { border-color: var(--neon); box-shadow: 0 0 15px rgba(255, 153, 0, 0.4); transform: scale(1.05); }
         .dur-badge { position: absolute; bottom: 3px; right: 3px; font-size: 9px; font-weight: 800; background: rgba(0,0,0,0.8); padding: 2px 4px; border-radius: 4px; color: var(--neon); }
+        
         .workout-ui { position: fixed; inset: 0; background: #000; z-index: 1000; display: flex; flex-direction: column; }
         .player-frame { width: 100%; flex: 1; background: #000; }
         .player-frame iframe { width: 100%; height: 100%; border: none; }
@@ -53,14 +56,6 @@
     <div id="root"></div>
     <script type="text/babel">
         const { useState, useEffect, useRef, useMemo } = React;
-
-        const AppIcon = () => (
-            <svg className="app-icon-svg" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <rect width="256" height="256" rx="60" fill="#000000"/>
-                <path d="M 45 35 L 220 128 L 45 221 Z" fill="#000000" stroke="#FF9900" strokeWidth="15" strokeLinejoin="round" shapeRendering="geometricPrecision"/>
-                <text x="115" y="138" dominantBaseline="middle" textAnchor="middle" fontFamily="system-ui, sans-serif" fontWeight="900" fontSize="72" fill="#FF9900">UT</text>
-            </svg>
-        );
 
         const Icons = {
             Back: () => <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>,
@@ -96,13 +91,16 @@
             if (!url) return { type: 'none', id: null, thumb: '' };
             const yt = url.match(/(?:youtu\.be\/|youtube\.com\/(?:.*v=|.*\/|.*embed\/))([^&?\s]{11})/);
             if (yt) return { type: 'yt', id: yt[1], thumb: `https://img.youtube.com/vi/${yt[1]}/mqdefault.jpg` };
-            return { type: 'web', id: null, thumb: 'https://placehold.co/100x60/222/ff9900?text=VIDEO' };
+            
+            // IG Detection
+            const ig = url.match(/(?:instagram\.com\/(?:p|reels|tv)\/)([^\/?#&]+)/);
+            if (ig) return { type: 'ig', id: ig[1], thumb: 'https://placehold.co/120x68/E1306C/ffffff?text=INSTAGRAM' };
+            
+            return { type: 'web', id: null, thumb: 'https://placehold.co/120x68/222/ff9900?text=VIDEO' };
         };
 
         const App = () => {
             const [view, setView] = useState('home');
-            
-            // Bulletproof state loading to prevent crashes
             const [lib, setLib] = useState(() => {
                 try { const val = JSON.parse(localStorage.getItem('d20_lib')); return Array.isArray(val) ? val : []; } 
                 catch { return []; }
@@ -112,14 +110,12 @@
                 catch { return {}; }
             });
             const [goal, setGoal] = useState(() => parseInt(localStorage.getItem('d20_goal')) || 20);
-            
             const [selectedId, setSelectedId] = useState(null);
             const [searchQuery, setSearchQuery] = useState('');
             const [inspecting, setInspecting] = useState(null);
             const [manualLog, setManualLog] = useState(false);
             const [showSettings, setShowSettings] = useState(false);
             const [editVideo, setEditVideo] = useState(null);
-            
             const [workout, setWorkout] = useState({ plan: [], idx: 0, secondsLeft: 0, isActive: false });
             const [playerPaused, setPlayerPaused] = useState(true);
             const playerRef = useRef(null);
@@ -147,37 +143,6 @@
                 }
                 return count;
             }, [hist, goal, todayKey]);
-
-            const exportData = () => {
-                const bundle = { lib, hist, goal, exportedAt: new Date().toISOString() };
-                const blob = new Blob([JSON.stringify(bundle, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `UTrainTube_Backup_${todayKey}.json`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            };
-
-            const importData = (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-                const reader = new FileReader();
-                reader.onload = (evt) => {
-                    try {
-                        const data = JSON.parse(evt.target.result);
-                        if (data.lib && Array.isArray(data.lib)) setLib(data.lib);
-                        if (data.hist && typeof data.hist === 'object') setHist(data.hist);
-                        if (data.goal) setGoal(data.goal);
-                        alert("Data Successfully Restored!");
-                        setShowSettings(false);
-                    } catch (err) { alert("Import Error: Invalid backup file format."); }
-                };
-                reader.readAsText(file);
-                e.target.value = null; // reset input
-            };
 
             useEffect(() => {
                 let ticker;
@@ -223,7 +188,14 @@
             const handleVideoSave = (e) => {
                 e.preventDefault();
                 const f = new FormData(e.target);
-                const data = { id: editVideo ? editVideo.id : Date.now(), title: f.get('t'), url: f.get('u'), durSec: parseTime(f.get('d')), startSec: parseTime(f.get('s')) };
+                const data = { 
+                    id: editVideo ? editVideo.id : Date.now(), 
+                    title: f.get('t'), 
+                    url: f.get('u'), 
+                    customThumb: f.get('ct'), // Save custom thumbnail
+                    durSec: parseTime(f.get('d')), 
+                    startSec: parseTime(f.get('s')) 
+                };
                 if (editVideo) setLib(lib.map(v => v.id === editVideo.id ? data : v));
                 else setLib([data, ...lib]);
                 setEditVideo(null);
@@ -233,32 +205,50 @@
             return (
                 <div className="container">
                     <header className="header-box">
-                        <AppIcon />
+                        <svg className="app-icon-svg" viewBox="0 0 256 256" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <rect width="256" height="256" rx="60" fill="#000000"/>
+                            <path d="M 45 35 L 220 128 L 45 221 Z" fill="#000000" stroke="#FF9900" strokeWidth="15" strokeLinejoin="round" shapeRendering="geometricPrecision"/>
+                            <text x="115" y="138" dominantBaseline="middle" textAnchor="middle" fontFamily="system-ui, sans-serif" fontWeight="900" fontSize="72" fill="#FF9900">UT</text>
+                        </svg>
                         <div className="title-row">
                             <h1 className="app-title">UTrainTube</h1>
-                            <span className="v-tag">v0.3</span>
+                            <span className="v-tag">v0.4</span>
                         </div>
                         <div className="settings-btn" onClick={() => setShowSettings(true)}>
                             <Icons.Settings />
                         </div>
                     </header>
 
-                    {/* Hidden input for restoring data */}
-                    <input type="file" ref={fileInputRef} style={{display:'none'}} accept=".json" onChange={importData} />
+                    <input type="file" ref={fileInputRef} style={{display:'none'}} accept=".json" onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (!file) return;
+                        const reader = new FileReader();
+                        reader.onload = (evt) => {
+                            try {
+                                const data = JSON.parse(evt.target.result);
+                                if (data.lib) setLib(data.lib);
+                                if (data.hist) setHist(data.hist);
+                                if (data.goal) setGoal(data.goal);
+                                alert("Restore Complete!");
+                                setShowSettings(false);
+                            } catch (err) { alert("Error reading file."); }
+                        };
+                        reader.readAsText(file);
+                    }} />
 
                     {view === 'home' && (
                         <>
                             <div className="card">
-                                <label>Target Goal</label>
+                                <label>Daily Target</label>
                                 <select value={goal} onChange={e => setGoal(parseInt(e.target.value))}>
                                     {[10, 20, 30, 45, 60].map(g => <option key={g} value={g}>{g} Minutes</option>)}
                                 </select>
                                 <div className="carousel">
                                     {lib.length === 0 ? (
-                                        <div style={{padding: '20px', color: 'var(--dim)', fontSize: 12, textAlign: 'center', width: '100%'}}>Your library is empty. Add videos to start!</div>
+                                        <div style={{padding: '20px', color: 'var(--dim)', fontSize: 12, textAlign: 'center', width: '100%'}}>Library is empty.</div>
                                     ) : lib.map(v => (
                                         <div key={v.id} className={`thumb-wrap ${selectedId === v.id ? 'selected' : ''}`} onClick={() => setSelectedId(v.id === selectedId ? null : v.id)}>
-                                            <img src={getMeta(v.url).thumb} style={{width:'100%', height:'100%', objectFit:'cover'}} />
+                                            <img src={v.customThumb || getMeta(v.url).thumb} style={{width:'100%', height:'100%', objectFit:'cover'}} />
                                             <div className="dur-badge">{formatTime((v.durSec || 0) - (v.startSec || 0))}</div>
                                         </div>
                                     ))}
@@ -270,9 +260,9 @@
                                     const first = p[0];
                                     setWorkout({ plan: p.slice(0,3), idx: 0, secondsLeft: ((first.durSec || 0) - (first.startSec || 0)), isActive: true });
                                     setView('workout');
-                                }}>{lib.length ? "Start Workout" : "Go to Library"}</button>
+                                }}>{lib.length ? "Start Workout" : "Add Videos"}</button>
                                 <div className="btn-row" style={{marginTop:8}}>
-                                    <button className="btn-sec" onClick={() => setManualLog(true)}>Manual Log</button>
+                                    <button className="btn-sec" onClick={() => setManualLog(true)}>Log Manually</button>
                                     <button className="btn-sec" onClick={() => setView('lib')}>Library</button>
                                 </div>
                             </div>
@@ -299,35 +289,31 @@
                     {view === 'lib' && (
                         <div style={{display:'flex', flexDirection:'column', height:'100%'}}>
                             <div className="btn-row">
-                                <button className="btn-neon-ghost btn-icon" onClick={() => setView('home')}><Icons.Back /></button>
-                                <div style={{flex: 1, display: 'flex', alignItems: 'center'}}>
-                                    <h3 style={{margin: 0, paddingLeft: 10}}>Video Library</h3>
-                                </div>
+                                <button className="btn-sec btn-icon" onClick={() => setView('home')}><Icons.Back /></button>
+                                <h3 style={{margin: 0, paddingLeft: 10, alignSelf:'center'}}>Video Library</h3>
                             </div>
                             <form className="card" onSubmit={handleVideoSave}>
-                                <label>{editVideo ? 'Edit Entry' : 'Add New Video'}</label>
+                                <label>{editVideo ? 'Edit Video' : 'Add New Video'}</label>
                                 <input name="t" placeholder="Title" defaultValue={editVideo?.title} required />
-                                <input name="u" placeholder="URL" defaultValue={editVideo?.url} required />
+                                <input name="u" placeholder="Video URL (YouTube or IG)" defaultValue={editVideo?.url} required />
+                                <input name="ct" placeholder="Custom Thumbnail Image URL (Optional)" defaultValue={editVideo?.customThumb} />
                                 <div style={{display:'flex', gap:8}}>
                                     <div style={{flex:1}}><label>Total Dur</label><input name="d" placeholder="MM:SS" defaultValue={editVideo ? formatTime(editVideo.durSec) : ''} required /></div>
                                     <div style={{flex:1}}><label>Start At</label><input name="s" placeholder="MM:SS" defaultValue={editVideo ? formatTime(editVideo.startSec) : ''} /></div>
                                 </div>
                                 <div className="btn-row">
-                                    <button type="submit">{editVideo ? 'Update' : 'Add'}</button>
+                                    <button type="submit">{editVideo ? 'Update' : 'Add to Library'}</button>
                                     {editVideo && <button type="button" className="btn-sec" onClick={() => setEditVideo(null)}>Cancel</button>}
                                 </div>
                             </form>
                             <div className="card" style={{flex:1, overflowY:'auto'}}>
-                                <div style={{position:'relative', marginBottom:12}}>
-                                    <input placeholder="Search library..." style={{paddingLeft:40}} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
-                                    <div style={{position:'absolute', left:12, top:10, color:'var(--dim)'}}><Icons.Search /></div>
-                                </div>
+                                <input placeholder="Search library..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
                                 {lib.filter(v => (v.title || '').toLowerCase().includes(searchQuery.toLowerCase())).map(v => (
                                     <div key={v.id} style={{display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:'1px solid #222'}}>
-                                        <div style={{position:'relative'}}><img src={getMeta(v.url).thumb} style={{width:70, height:40, borderRadius:6, objectFit:'cover'}} /><div className="dur-badge" style={{fontSize:8}}>{formatTime((v.durSec || 0) - (v.startSec || 0))}</div></div>
+                                        <div style={{position:'relative'}}><img src={v.customThumb || getMeta(v.url).thumb} style={{width:70, height:40, borderRadius:6, objectFit:'cover'}} /></div>
                                         <div style={{flex:1, fontSize:13, fontWeight:700}}>{v.title}</div>
                                         <button className="btn-sec btn-icon" style={{width:32, height:32}} onClick={() => setEditVideo(v)}><Icons.Edit /></button>
-                                        <button className="btn-sec btn-icon" style={{width:32, height:32, color:'var(--danger)'}} onClick={() => { if(confirm('Delete this video?')) setLib(lib.filter(x => x.id !== v.id)) }}><Icons.Trash /></button>
+                                        <button className="btn-sec btn-icon" style={{width:32, height:32, color:'var(--danger)'}} onClick={() => { if(confirm('Delete?')) setLib(lib.filter(x => x.id !== v.id)) }}><Icons.Trash /></button>
                                     </div>
                                 ))}
                             </div>
@@ -336,45 +322,45 @@
 
                     {view === 'workout' && (
                         <div className="workout-ui">
-                            <div className="player-frame">{getMeta(workout.plan[workout.idx]?.url).type === 'yt' ? <div id="player"></div> : <iframe src={`${workout.plan[workout.idx]?.url?.split('?')[0] || ''}embed`} allowFullScreen></iframe>}</div>
+                            <div className="player-frame">
+                                {getMeta(workout.plan[workout.idx]?.url).type === 'yt' ? 
+                                    <div id="player"></div> : 
+                                    <iframe src={`${workout.plan[workout.idx]?.url?.split('?')[0] || ''}embed`} allowFullScreen></iframe>
+                                }
+                            </div>
                             <div className="workout-footer">
                                 <div className="timer-display">{formatTime(workout.secondsLeft)}</div>
-                                <div className="btn-row" style={{justifyContent:'center', marginBottom:10}}>
-                                    <button onClick={() => setPlayerPaused(!playerPaused)} className={playerPaused ? "btn-sec" : ""} style={{flex:'none', width:140, background: playerPaused ? 'var(--safe)' : '#2a2a2a', color: playerPaused ? '#000' : '#fff'}}>{playerPaused ? <Icons.Play /> : <Icons.Pause />}{playerPaused ? 'RESUME' : 'PAUSE'}</button>
-                                </div>
+                                <button onClick={() => setPlayerPaused(!playerPaused)} style={{width:160, margin:'0 auto 10px', background: playerPaused ? 'var(--safe)' : '#2a2a2a'}}>
+                                    {playerPaused ? <Icons.Play /> : <Icons.Pause />} {playerPaused ? 'RESUME' : 'PAUSE'}
+                                </button>
                                 <h3 style={{margin:0}}>{workout.plan[workout.idx]?.title}</h3>
                                 <div className="btn-row" style={{marginTop:15}}>
-                                    <button className="btn-sec" onClick={() => { if (workout.idx + 1 < workout.plan.length) { const n = workout.idx + 1; setWorkout({...workout, idx: n, secondsLeft: ((workout.plan[n].durSec || 0) - (workout.plan[n].startSec || 0))}); } else { setView('home'); setWorkout({...workout, isActive: false}); } }}>Skip</button>
+                                    <button className="btn-sec" onClick={() => {
+                                        if (workout.idx + 1 < workout.plan.length) {
+                                            const n = workout.idx + 1;
+                                            setWorkout({...workout, idx: n, secondsLeft: ((workout.plan[n].durSec || 0) - (workout.plan[n].startSec || 0))});
+                                        } else { setView('home'); setWorkout({...workout, isActive: false}); }
+                                    }}>Skip</button>
                                     <button onClick={() => {setView('home'); setWorkout({...workout, isActive: false});}}>End</button>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    {/* NEW: Settings & Backup Modal */}
                     {showSettings && (
                         <div className="overlay" onClick={() => setShowSettings(false)}>
                             <div className="card" style={{width:'90%'}} onClick={e => e.stopPropagation()}>
-                                <div style={{display:'flex', justifyContent:'space-between', marginBottom:15, alignItems: 'center'}}>
-                                    <h3 style={{margin: 0}}>Data & Settings</h3>
-                                    <div onClick={() => setShowSettings(false)} style={{cursor: 'pointer', padding: 5}}><Icons.X /></div>
-                                </div>
-                                <p style={{fontSize: 12, color: 'var(--dim)', marginBottom: 20}}>
-                                    Your data is stored locally. Save a backup to prevent data loss or to transfer your history to a new device.
-                                </p>
+                                <div style={{display:'flex', justifyContent:'space-between', marginBottom:15}}><h3>Data Center</h3><div onClick={() => setShowSettings(false)}><Icons.X /></div></div>
                                 <div className="btn-row">
-                                    <button onClick={exportData}><Icons.Export /> Backup</button>
-                                    <button onClick={() => fileInputRef.current.click()} className="btn-sec"><Icons.Import /> Restore</button>
+                                    <button onClick={() => {
+                                        const bundle = { lib, hist, goal };
+                                        const blob = new Blob([JSON.stringify(bundle)], { type: 'application/json' });
+                                        const url = URL.createObjectURL(blob);
+                                        const a = document.createElement('a'); a.href = url; a.download = `UTrainTube_Backup.json`; a.click();
+                                    }}>Backup</button>
+                                    <button className="btn-sec" onClick={() => fileInputRef.current.click()}>Restore</button>
                                 </div>
-                                <hr style={{borderColor:'#333', margin:'20px 0'}} />
-                                <button className="btn-danger-ghost" onClick={() => {
-                                    if(confirm('WARNING: Are you sure you want to delete ALL library and history data? This cannot be undone.')) {
-                                        setLib([]);
-                                        setHist({});
-                                        setGoal(20);
-                                        setShowSettings(false);
-                                    }
-                                }}>Erase All App Data</button>
+                                <button className="btn-danger-ghost" style={{marginTop:20}} onClick={() => { if(confirm('Erase ALL data?')) { setLib([]); setHist({}); setGoal(20); setShowSettings(false); } }}>Erase All App Data</button>
                             </div>
                         </div>
                     )}
@@ -384,10 +370,10 @@
                             <div className="card" style={{width:'90%'}} onClick={e => e.stopPropagation()}>
                                 <div style={{display:'flex', justifyContent:'space-between', marginBottom:15}}><h3>Manual Activity</h3><div onClick={() => setManualLog(false)}><Icons.X /></div></div>
                                 <label>Date</label><input type="date" id="mD" defaultValue={todayKey} />
-                                <label>Name</label><input id="mL" placeholder="Gym, Running, etc." />
-                                <label>Minutes</label><input id="mM" type="number" />
+                                <label>Activity Name</label><input id="mL" placeholder="Gym, Running, etc." />
+                                <label>Duration (Minutes)</label><input id="mM" type="number" />
                                 <button onClick={() => {
-                                    const l = document.getElementById('mL').value || "Manual";
+                                    const l = document.getElementById('mL').value || "Activity";
                                     const m = parseFloat(document.getElementById('mM').value) || 0;
                                     const d = document.getElementById('mD').value;
                                     setHist(prev => {
@@ -395,7 +381,7 @@
                                         return { ...prev, [d]: { items: [...(day.items || []), { label: l, mins: m }] } };
                                     });
                                     setManualLog(false);
-                                }}>Save</button>
+                                }}>Save Activity</button>
                             </div>
                         </div>
                     )}
@@ -404,8 +390,8 @@
                         <div className="overlay" onClick={() => setInspecting(null)}>
                             <div className="card" style={{width:'90%'}} onClick={e => e.stopPropagation()}>
                                 <div style={{display:'flex', justifyContent:'space-between', marginBottom:15}}><h3>{inspecting.date}</h3><div onClick={() => setInspecting(null)}><Icons.X /></div></div>
-                                {(inspecting.items || []).length === 0 && <p style={{color: 'var(--dim)', fontSize: 13, textAlign: 'center'}}>No activity recorded.</p>}
-                                {(inspecting.items || []).map((it, i) => (
+                                {inspecting.items.length === 0 && <p style={{color:'var(--dim)', textAlign:'center'}}>No activity.</p>}
+                                {inspecting.items.map((it, i) => (
                                     <div key={i} style={{display:'flex', alignItems:'center', padding:'10px 0', borderBottom:'1px solid #333'}}>
                                         <div style={{flex:1}}><div style={{fontSize:13, fontWeight:700}}>{it.label}</div><div style={{fontSize:11, color:'var(--neon)'}}>{Math.round(it.mins)}m</div></div>
                                         <button className="btn-sec btn-icon" style={{width:32, height:32, color:'var(--danger)'}} onClick={() => {
