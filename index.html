@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Crect width='256' height='256' rx='60' fill='%23FF9900' stroke='black' stroke-width='15'/%3E%3Cpath d='M 70 60 L 210 128 L 70 196 Z' fill='black'/%3E%3Ctext x='125' y='138' text-anchor='middle' dominant-baseline='middle' font-family='sans-serif' font-weight='900' font-size='65' fill='%23FF9900'%3EUT%3C/text%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Crect width='256' height='256' rx='60' fill='black' stroke='%23FF9900' stroke-width='15'/%3E%3Cpath d='M 70 60 L 210 128 L 70 196 Z' fill='black' stroke='%23FF9900' stroke-width='12' stroke-linejoin='round'/%3E%3Ctext x='115' y='138' text-anchor='middle' dominant-baseline='middle' font-family='sans-serif' font-weight='900' font-size='65' fill='%23FF9900'%3EUT%3C/text%3E%3C/svg%3E">
     <title>UTrainTube</title>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -13,9 +13,8 @@
         body { background: var(--bg); color: var(--text); font-family: -apple-system, sans-serif; margin: 0; padding: 10px; overflow-x: hidden; height: 100vh; }
         .container { max-width: 480px; margin: 0 auto; height: 100%; display: flex; flex-direction: column; position: relative; }
         
-        /* HEADER REFINEMENT */
         .header-box { display: flex; flex-direction: row; align-items: center; justify-content: center; margin-bottom: 25px; gap: 15px; position: relative; }
-        .app-icon-svg { width: 55px; height: 55px; flex-shrink: 0; border-radius: 12px; }
+        .app-icon-svg { width: 55px; height: 55px; flex-shrink: 0; }
         .title-row { display: flex; align-items: baseline; gap: 10px; }
         .app-title { color: var(--neon); margin: 0; font-size: 32px; font-weight: 900; letter-spacing: -1px; line-height: 1; }
         .v-tag { color: var(--dim); font-size: 12px; font-family: monospace; font-weight: 700; white-space: nowrap; }
@@ -74,11 +73,12 @@
             Video: () => <svg viewBox="0 0 24 24" stroke="currentColor" fill="none"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
         };
 
+        /* REFINED LOGO COMPONENT */
         const AppLogo = () => (
             <svg className="app-icon-svg" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
-                <rect width="256" height="256" rx="60" fill="#FF9900" stroke="black" strokeWidth="15"/>
-                <path d="M 70 60 L 210 128 L 70 196 Z" fill="black"/>
-                <text x="125" y="138" dominantBaseline="middle" textAnchor="middle" fontFamily="system-ui, sans-serif" fontWeight="900" fontSize="65" fill="#FF9900">UT</text>
+                <rect width="256" height="256" rx="60" fill="black" stroke="#FF9900" strokeWidth="15"/>
+                <path d="M 70 60 L 210 128 L 70 196 Z" fill="black" stroke="#FF9900" strokeWidth="12" strokeLinejoin="round"/>
+                <text x="115" y="138" dominantBaseline="middle" textAnchor="middle" fontFamily="system-ui, sans-serif" fontWeight="900" fontSize="65" fill="#FF9900">UT</text>
             </svg>
         );
 
@@ -236,7 +236,7 @@
                         <AppLogo />
                         <div className="title-row">
                             <h1 className="app-title">UTrainTube</h1>
-                            <span className="v-tag">v0.6</span>
+                            <span className="v-tag">v0.7</span>
                         </div>
                         <div className="settings-btn" onClick={() => setShowSettings(true)}>
                             <Icons.Settings />
